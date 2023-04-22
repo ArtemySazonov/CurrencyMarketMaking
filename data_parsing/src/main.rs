@@ -5,9 +5,15 @@
  * корректности считывания файла.
  */
 
+mod orderbook;
 mod parser;
+
+use crate::orderbook::{OrderBook};
+use crate::parser::read_json;
 
 fn main()
 {
-
+    let path = "data/test.txt";
+    let _res: OrderBook = read_json(&path).unwrap();
+    OrderBook::print(&_res);
 }
