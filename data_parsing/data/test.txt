@@ -11,4 +11,4 @@
 {"date":"2022-11-10T07:00:03.124000001","instrument":"USD/RUB_T+1","type":"INCREMENT","side":"BID","quotes":{"added":[{"id":6153236882637504,"price":65.5075,"size":70000.0}],"changed":[],"deleted":[41512504]}}
 {"date":"2022-11-10T07:00:03.124000001","instrument":"USD/RUB_T+1","type":"INCREMENT","side":"ASK","quotes":{"added":[{"id":61507504,"price":61.5075,"size":70000.0}],"changed":[],"deleted":[61512504]}}
 {"date":"2022-11-10T07:00:03.124000004","instrument":"USD/RUB_T+1","type":"INCREMENT","side":"BID","quotes":{"added":[],"changed":[],"deleted":[]}}
-{"date":"2022-11-10T07:00:03.124000004","instrument":"USD/RUB_T+1","type":"INCREMENT","side":"ASK","quotes":{"added":[{"id":6150503,"price":61.505,"size":50000.0}],"changed":[{"id":6151503,"price":61.515,"size":56000.0}],"deleted":[]}}
+{"date":"2022-11-10T07:00:03.124000004","instrument":"USD/RUB_T+1","type":"INCREMENT","side":"ASK","quotes":{"added":[{"id":6150503,"price":61.505,"size":50000.0},{"id":6123234102,"price":61.11,"size":50000.0},{"id":61554102,"price":61.11,"size":50000.0},{"id":617685102,"price":61.11,"size":50000.0}],"changed":[{"id":6151503,"price":61.515,"size":56000.0}],"deleted":[]}}
