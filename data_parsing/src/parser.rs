@@ -6,8 +6,8 @@ use std::{
     io::{self, BufRead},
     path::Path,
 };
-
-use crate::orderbook::{new, Order, OrderBook, Quote, QuoteElement,};
+use std::collections::{VecDeque};
+use crate::orderbook::{new, OrderBook, L3Quote,};
 
 fn read_lines<P>(filename: &P) -> io::Result<io::Lines<io::BufReader<File>>>
     where P: AsRef<Path>, {
@@ -15,15 +15,9 @@ fn read_lines<P>(filename: &P) -> io::Result<io::Lines<io::BufReader<File>>>
         Ok(io::BufReader::new(file).lines())
 }
 
-pub fn read_json(filename: &str) -> std::result::Result<OrderBook, std::string::String>
+pub fn read_json(filename: &str) -> Result<OrderBook, String>
 {
-    let mut orderbook = OrderBook
-    {
-        _data: new()
-    };
-    let _bid_text: std::string::String = "BID".to_string();
-    let _ask_text: std::string::String = "ASK".parse().unwrap();
-    let _inc_text: std::string::String = "INCREMENT".parse().unwrap();
+    let mut orderbook = OrderBook { bid: new(), ask: new() };
 
     if let Ok(lines) = read_lines(&filename)
     {
@@ -33,77 +27,67 @@ pub fn read_json(filename: &str) -> std::result::Result<OrderBook, std::string::
             {
                 let json_line: Value = serde_json::from_str(&line_value).unwrap();
 
-                let json_line_date = json_line["date"].to_string();
-                let json_line_side= json_line["side"].to_string();
-                let json_line_instrument = json_line["instrument"].to_string();
-                let json_line_type = json_line["type"].to_string();
+                let json_line_side= &json_line["side"].to_string()[1..4];
+                let side= if json_line_side == "BID" { &mut orderbook.bid } else { &mut orderbook.ask };
+
+                //let json_line_type = json_line["type"].to_string();
 
                 let json_line_quotes = &json_line["quotes"];
 
-                let mut json_line_quotes_added_vec   = Vec::new();
-                let mut json_line_quotes_changed_vec = Vec::new();
-                let mut json_line_quotes_deleted_vec = Vec::new();
-
-                let json_line_quotes_added = json_line_quotes["added"].as_array();
-                let json_line_quotes_changed = json_line_quotes["changed"].as_array();
-                let json_line_quotes_deleted = json_line_quotes["deleted"].as_array();
-
-                if json_line_quotes_added != None
+                let json_line_quotes_vec = json_line_quotes["added"].as_array();
+                if json_line_quotes_vec != None
                 {
-                    let json_line_quotes_added = json_line_quotes_added.unwrap();
+                    let json_line_quotes_added = json_line_quotes_vec.unwrap();
                     for quote in json_line_quotes_added
                     {
                         let id = quote["id"].as_i64().unwrap();
                         let price = quote["price"].as_f64().unwrap();
+                        let price_key = price.to_string();
                         let size = quote["size"].as_f64().unwrap();
-
-                        json_line_quotes_added_vec.push(QuoteElement{
-                            _id:    id,
-                            _price: price,
-                            _size:  size,
-                        })
+                        side.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
+                            id,
+                            price,
+                            size,
+                        });
                     }
                 }
-                if json_line_quotes_changed != None
+
+                let json_line_quotes_vec = json_line_quotes["changed"].as_array();
+                if json_line_quotes_vec != None
                 {
-                    let json_line_quotes_changed  = json_line_quotes_changed.unwrap();
+                    let json_line_quotes_changed = json_line_quotes_vec.unwrap();
                     for quote in json_line_quotes_changed
                     {
                         let id = quote["id"].as_i64().unwrap();
                         let price = quote["price"].as_f64().unwrap();
+                        let price_key = price.to_string();
                         let size = quote["size"].as_f64().unwrap();
-
-                        json_line_quotes_changed_vec.push(QuoteElement{
-                            _id:    id,
-                            _price: price,
-                            _size:  size,
-                        })
+                        for (_key, value) in &mut *side
+                        {
+                            value.retain(|x| x.id != id)
+                        }
+                        side.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
+                            id,
+                            price,
+                            size,
+                        });
                     }
                 }
-                if json_line_quotes_deleted != None
+
+                let json_line_quotes_vec = json_line_quotes["deleted"].as_array();
+                if json_line_quotes_vec != None
                 {
-                    let json_line_quotes_deleted = json_line_quotes_deleted.unwrap();
+                    let json_line_quotes_deleted = json_line_quotes_vec.unwrap();
                     for quote in json_line_quotes_deleted
                     {
-                        let id: i64 = quote.as_i64().unwrap();
-                        json_line_quotes_deleted_vec.push(id)
+                        let id = quote.as_i64().unwrap();
+                        for (_key, value) in &mut *side
+                        {
+                            value.retain(|x| x.id != id);
+                        }
                     }
                 }
 
-                let ord = Order
-                {
-                    _date:       json_line_date,
-                    _side:       json_line_side,
-                    _instrument: json_line_instrument,
-                    _type:       json_line_type,
-                    _quotes:     Quote
-                                 {
-                                     _added:   json_line_quotes_added_vec,
-                                     _changed: json_line_quotes_changed_vec,
-                                     _deleted: json_line_quotes_deleted_vec,
-                                 },
-                };
-                orderbook.insert(ord)
             }
         }
     }
@@ -111,5 +95,8 @@ pub fn read_json(filename: &str) -> std::result::Result<OrderBook, std::string::
     {
         return Err("File could not be opened.".to_string());
     }
+    orderbook.ask.retain(|_k,v| v.len() > 0);
+    orderbook.bid.retain(|_k,v| v.len() > 0);
+
     Ok(orderbook)
 }
