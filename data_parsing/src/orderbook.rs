@@ -1,7 +1,6 @@
 use std::collections::{BTreeMap, VecDeque,};
 use serde_json::{Value,};
-use std::{fs::File, io::{self, BufRead}, path::Path, };
-use kdam::tqdm;
+use std::{fs::File, io::{self, BufRead, BufReader}, path::Path, };
 
 pub struct L3Quote
 {
@@ -10,36 +9,41 @@ pub struct L3Quote
     pub size: f64,
 }
 
-pub struct OrderBook // key = price
+pub struct OrderBook // key = price/0.0025
 {
     pub instrument: String,
-    pub bid: BTreeMap<String, VecDeque<L3Quote>>,
-    pub ask: BTreeMap<String, VecDeque<L3Quote>>,
+    pub bid: BTreeMap<i64, VecDeque<L3Quote>>,
+    pub ask: BTreeMap<i64, VecDeque<L3Quote>>,
 }
 
 impl OrderBook
 {
-    pub fn new_side() -> BTreeMap<String, VecDeque<L3Quote>>
+    fn new_side() -> BTreeMap<i64, VecDeque<L3Quote>>
     {
         BTreeMap::new()
     }
 
-    fn read_lines<P>(filename: &P) -> io::Result<io::Lines<io::BufReader<File>>>
-        where P: AsRef<Path>, {
-        let file = File::open(filename)?;
-        Ok(io::BufReader::new(file).lines())
+    pub fn new() -> OrderBook
+    {
+        OrderBook{ instrument: "".to_string(), bid: OrderBook::new_side(), ask: OrderBook::new_side() }
     }
 
-    pub fn update(&mut self, string: String) -> Result<&mut OrderBook, String>
+    fn lines_from_file(filename: impl AsRef<Path>) -> io::Result<Vec<String>> {
+        BufReader::new(File::open(filename)?).lines().collect()
+    }
+
+    pub fn update(&mut self, lines: Vec<String>) -> Result<&mut OrderBook, String>
     {
-        let lines = string.lines();
-        for line in tqdm!(lines)
+        for line in lines
         {
             let json_line: Value = serde_json::from_str(&line).unwrap();
 
             let json_line_side = &json_line["side"].to_string()[1..4];
             let side = if json_line_side == "BID" { &mut self.bid } else { &mut self.ask };
-            if self.instrument != json_line["instrument"].to_string() { return Err("Wrong instrument".to_string()); }
+            if self.instrument != "" && self.instrument != json_line["instrument"].to_string()
+            {
+                return Err("Wrong instrument".to_string());
+            }
 
             let json_line_quotes = &json_line["quotes"];
 
@@ -51,7 +55,7 @@ impl OrderBook
                 {
                     let id = quote["id"].as_i64().unwrap();
                     let price = quote["price"].as_f64().unwrap();
-                    let price_key = price.to_string();
+                    let price_key = (price*400.0) as i64;
                     let size = quote["size"].as_f64().unwrap();
                     side.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
                         id,
@@ -69,7 +73,7 @@ impl OrderBook
                 {
                     let id = quote["id"].as_i64().unwrap();
                     let price = quote["price"].as_f64().unwrap();
-                    let price_key = price.to_string();
+                    let price_key = (price*400.0) as i64;
                     let size = quote["size"].as_f64().unwrap();
                     for (_key, value) in &mut *side
                     {
@@ -82,7 +86,6 @@ impl OrderBook
                     });
                 }
             }
-
 
             let json_line_quotes_vec = json_line_quotes["deleted"].as_array();
             if json_line_quotes_vec != None
@@ -106,86 +109,16 @@ impl OrderBook
 
     pub fn from_json(filename: &str) -> Result<OrderBook, String>
     {
-        let mut orderbook = OrderBook {instrument: String::from(""), bid: OrderBook::new_side(), ask: OrderBook::new_side() };
+        let mut orderbook = OrderBook::new();
 
-        if let Ok(lines) = OrderBook::read_lines(&filename)
+        if let Ok(lines) = OrderBook::lines_from_file(&filename)
         {
-            for line in tqdm!(lines)
-            {
-                if let Ok(line_value) = line
-                {
-                    let json_line: Value = serde_json::from_str(&line_value).unwrap();
-
-                    let json_line_side= &json_line["side"].to_string()[1..4];
-                    let side= if json_line_side == "BID" { &mut orderbook.bid } else { &mut orderbook.ask };
-                    orderbook.instrument = json_line["instrument"].to_string();
-                    //let json_line_type = json_line["type"].to_string();
-
-                    let json_line_quotes = &json_line["quotes"];
-
-                    let json_line_quotes_vec = json_line_quotes["added"].as_array();
-                    if json_line_quotes_vec != None
-                    {
-                        let json_line_quotes_added = json_line_quotes_vec.unwrap();
-                        for quote in json_line_quotes_added
-                        {
-                            let id = quote["id"].as_i64().unwrap();
-                            let price = quote["price"].as_f64().unwrap();
-                            let price_key = price.to_string();
-                            let size = quote["size"].as_f64().unwrap();
-                            side.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
-                                id,
-                                price,
-                                size,
-                            });
-                        }
-                    }
-
-                    let json_line_quotes_vec = json_line_quotes["changed"].as_array();
-                    if json_line_quotes_vec != None
-                    {
-                        let json_line_quotes_changed = json_line_quotes_vec.unwrap();
-                        for quote in json_line_quotes_changed
-                        {
-                            let id = quote["id"].as_i64().unwrap();
-                            let price = quote["price"].as_f64().unwrap();
-                            let price_key = price.to_string();
-                            let size = quote["size"].as_f64().unwrap();
-                            for (_key, value) in &mut *side
-                            {
-                                value.retain(|x| x.id != id)
-                            }
-                            side.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
-                                id,
-                                price,
-                                size,
-                            });
-                        }
-                    }
-
-                    let json_line_quotes_vec = json_line_quotes["deleted"].as_array();
-                    if json_line_quotes_vec != None
-                    {
-                        let json_line_quotes_deleted = json_line_quotes_vec.unwrap();
-                        for quote in json_line_quotes_deleted
-                        {
-                            let id = quote.as_i64().unwrap();
-                            for (_key, value) in &mut *side
-                            {
-                                value.retain(|x| x.id != id);
-                            }
-                        }
-                    }
-
-                }
-            }
+            orderbook.update(lines).expect("TODO: panic message");
         }
         else
         {
             return Err("File could not be opened.".to_string());
         }
-        orderbook.ask.retain(|_k,v| v.len() != 0);
-        orderbook.bid.retain(|_k,v| v.len() != 0);
 
         Ok(orderbook)
     }
@@ -195,7 +128,7 @@ impl OrderBook
         println!("\n\nAsk:");
         for (key, value) in &orderbook.ask
         {
-            let price_level: f64 = key.parse().unwrap();
+            let price_level: f64 = (*key as f64) * 0.0025;
             print!("\nRUB {:.4}: ", price_level);
             for quote in value {
                 print!("(id: {}, size: {}), ", quote.id, quote.size);
@@ -205,7 +138,7 @@ impl OrderBook
         println!("\n\nBid:");
         for (key, value) in &orderbook.bid
         {
-            let price_level: f64 = key.parse().unwrap();
+            let price_level: f64 = (*key as f64) * 0.0025;
             print!("\nRUB {:.4}: ", price_level);
             for quote in value {
                 print!("(id: {}, size: {}), ", quote.id, quote.size);
