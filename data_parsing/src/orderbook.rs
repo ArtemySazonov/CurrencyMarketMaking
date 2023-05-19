@@ -229,13 +229,16 @@ mod tests {
 
         let info: String = format!("{}\n{}", r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":{"added":[{"id":1,"price":4000.0,"size":1.05}],"changed":[],"deleted":[]}}"#, r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":{"added":[{"id":2,"price":3000.0,"size":1.10}],"changed":[],"deleted":[]}}"#);
         let info: &str = &info;
+
         let mut bid_expected: BTreeMap<i64, VecDeque<L3Quote>> = BTreeMap::new();
+        let mut ask_expected: BTreeMap<i64, VecDeque<L3Quote>> = BTreeMap::new();
+
         bid_expected.insert((4000.0*price_step_inv) as i64, vec![L3Quote {
             id: 1,
             price: 4000.0,
             size: 1.05,
         }].into_iter().collect());
-        let mut ask_expected: BTreeMap<i64, VecDeque<L3Quote>> = BTreeMap::new();
+
         ask_expected.insert((3000.0*price_step_inv) as i64, vec![L3Quote {
             id: 2,
             price: 3000.0,
@@ -264,7 +267,6 @@ mod tests {
         let mut bid_expected: BTreeMap<i64, VecDeque<L3Quote>> = BTreeMap::new();
         let mut ask_expected: BTreeMap<i64, VecDeque<L3Quote>> = BTreeMap::new();
         let mut orderbook = OrderBook::new(price_step);
-
 
         let info1: &str = r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":{"added":[{"id":1,"price":4001.0,"size":1.05}],"changed":[],"deleted":[]}}"#;
         let info2: &str = r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":{"added":[{"id":2,"price":4002.0,"size":1.10}],"changed":[],"deleted":[]}}"#;
@@ -316,6 +318,16 @@ mod tests {
     }
 
     #[test]
+    fn orderbook_create_non_increment()
+    {
+        /*
+         * This test checks that the orderbook is created correctly from a non-incremental message (SNAPSHOT)
+         */
+        let info: &str = r#"{"instrumeent":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":[]}"#;
+        let _orderbook = OrderBook::from_str(info, 0.0025).expect("Failed to create orderbook from string");
+    }
+
+    #[test]
     #[should_panic]
     fn orderbook_create_from_incorrect_json()
     {
@@ -323,7 +335,6 @@ mod tests {
          * This test should panic since 'instrument' is misspelled as 'instrumeent'
          */
         let price_step: f64 = 0.0025;
-
         let info: &str = r#"{"instrumeent":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":{"added":[{"id":1,"price":4000.0,"size":1.05}],"changed":[],"deleted":[]}}"#;
         let _orderbook = OrderBook::from_str(info, price_step).expect("Failed to create orderbook from string");
     }
