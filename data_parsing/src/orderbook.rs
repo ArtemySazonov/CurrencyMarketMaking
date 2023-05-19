@@ -323,7 +323,7 @@ mod tests {
         /*
          * This test checks that the orderbook is created correctly from a non-incremental message (SNAPSHOT)
          */
-        let info: &str = r#"{"instrumeent":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":[]}"#;
+        let info: &str = r#"{"instrument":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":[]}"#;
         let _orderbook = OrderBook::from_str(info, 0.0025).expect("Failed to create orderbook from string");
     }
 
