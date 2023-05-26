@@ -1,14 +1,20 @@
-use std::{io::BufReader, path::Path, fs::File, io::BufRead, io::Error, collections::{BTreeMap, VecDeque,}};
+use std::{io::BufReader, path::Path, fs::File, io::BufRead, io::Error, collections::{BTreeMap, VecDeque, HashMap}};
 use serde::{Deserialize, Serialize};
 
 const BAD_STRING:          &str = "Bad string found. Check the inputs.";
-const BAD_PATH_TO_FILE:    &str = "File could not be found. Check the inputs.";
 const INSTRUMENT_MISMATCH: &str = "Instrument mismatch. Check the inputs.";
 
 pub enum Side
 {
     BID,
     ASK,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum QuotesEnum {
+    INCREMENT(Increment),
+    SNAPSHOT(Vec<L3Quote>)
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -20,18 +26,11 @@ pub struct L3Quote
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Quotes
+pub struct Increment
 {
     pub added: Vec<L3Quote>,
     pub changed: Vec<L3Quote>,
     pub deleted: Vec<i64>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-pub enum QuotesEnum {
-    Quotes(Quotes),
-    Vec(Vec<String>)
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -55,6 +54,7 @@ pub struct OrderBook
 
     price_step: f64,
     price_step_inv: f64,
+    id_map: HashMap<i64, i64>,
 }
 
 impl OrderBook
@@ -64,96 +64,119 @@ impl OrderBook
         BTreeMap::new()
     }
 
-    pub fn new(price_step: f64) -> OrderBook
+    pub fn new(instrument: String, price_step: f64) -> OrderBook
     {
-        OrderBook{ instrument: "".to_string(), date: "".to_string(), bid: OrderBook::new_side(), ask: OrderBook::new_side(), price_step, price_step_inv: 1./price_step }
+        OrderBook{ instrument, date: "".to_string(), bid: OrderBook::new_side(), ask: OrderBook::new_side(), price_step, price_step_inv: 1./price_step, id_map: HashMap::new() }
     }
 
-    pub fn update(&mut self, line: &String) -> Result<&mut OrderBook, String>
+    #[inline(always)]
+    fn add(&mut self, side_type: &Side, price_step_inv: f64, price: f64, size: f64, id: i64)
     {
-        let json_line: Tick = serde_json::from_str(&line).unwrap();
+        let price_key = (price * price_step_inv) as i64;
+        match side_type {
+            Side::ASK => self.ask.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
+                id,
+                price,
+                size,
+            }),
+            Side::BID => self.bid.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
+                id,
+                price,
+                size,
+            }),
+        }
+        self.id_map.insert(id, price_key);
+    }
 
-        let side = if json_line.side == String::from("BID") { &mut self.bid } else { &mut self.ask };
-        if self.instrument == json_line.instrument || self.instrument == ""
+    #[inline(always)]
+    fn remove(&mut self, side_type: &Side, id: i64)
+    {
+        if let Some(price_level) = self.id_map.get(&id)
         {
-            if self.instrument == ""
-            {
-                self.instrument = json_line.instrument.to_string();
-            }
-            self.date = json_line.date;
-
-            let quotes = match json_line.quotes
-            {
-                QuotesEnum::Quotes(quotes) => quotes,
-                QuotesEnum::Vec(_) => {
-                    return Ok(self);
-                },
+            match side_type {
+                Side::ASK => self.ask.entry(*price_level).and_modify(|x| x.retain(|q| q.id != id)),
+                Side::BID => self.bid.entry(*price_level).and_modify(|x| x.retain(|q| q.id != id)),
             };
-            for quote in quotes.added
-            {
-                let price_key = (quote.price * self.price_step_inv) as i64;
-                side.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
-                    id: quote.id,
-                    price: quote.price,
-                    size: quote.size,
-                });
-            }
-
-            for quote in quotes.changed
-            {
-                let price_key = (quote.price * self.price_step_inv) as i64;
-                for (_key, value) in &mut *side
-                {
-                    value.retain(|x| x.id != quote.id)
-                }
-                side.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
-                    id: quote.id,
-                    price: quote.price,
-                    size: quote.size,
-                });
-            }
-
-            for id in quotes.deleted
-            {
-                for (_key, value) in &mut *side
-                {
-                    value.retain(|x| x.id != id);
-                }
-            }
+            self.id_map.remove(&id);
         }
-        else
-        {
-            return Err(INSTRUMENT_MISMATCH.to_string());
-        }
-
-        Ok(self)
     }
 
+    #[inline(always)]
     fn clean(&mut self)
     {
         self.ask.retain(|_k,v| v.len() != 0);
         self.bid.retain(|_k,v| v.len() != 0);
     }
 
-    pub fn update_from_string(&mut self, lines: String) -> Result<&mut OrderBook, String>
+    pub fn update(&mut self, line: &String)
+    {
+        let result: Result<Tick, serde_json::Error> = serde_json::from_str(line);
+        if let Ok(json_line) = result
+        {
+            let (side, side_type) = if json_line.side == String::from("BID") { (&mut self.bid, Side::BID) } else { (&mut self.ask, Side::ASK) };
+            if self.instrument == json_line.instrument
+            {
+                self.date = json_line.date;
+
+                let quotes = match json_line.quotes
+                {
+                    QuotesEnum::INCREMENT(quotes) => quotes,
+                    QuotesEnum::SNAPSHOT(v) => {
+                        side.clear();
+
+                        for quote in v
+                        {
+                            self.add(&side_type, self.price_step_inv, quote.price, quote.size, quote.id);
+                        }
+                        return;
+                    }
+                };
+
+                for id in quotes.deleted
+                {
+                    self.remove(&side_type, id);
+                }
+
+                for quote in quotes.changed
+                {
+                    self.remove(&side_type,  quote.id);
+                    self.add(&side_type, self.price_step_inv, quote.price, quote.size, quote.id);
+                }
+
+                for quote in quotes.added
+                {
+                    self.add(&side_type, self.price_step_inv, quote.price, quote.size, quote.id);
+                }
+            }
+            else
+            {
+                panic!("{}", INSTRUMENT_MISMATCH);
+            }
+        }
+        else
+        {
+            panic!("{}", BAD_STRING);
+        }
+    }
+
+    pub fn update_from_string(&mut self, lines: String)
     {
         let lines: Vec<String> = lines.split("\n").map(|x| x.to_string()).collect();
         for line in &lines
         {
-            self.update(line).expect(BAD_STRING);
+            self.update(line);
         }
         self.clean();
-        Ok(self)
     }
 
-    pub fn from_file(filename: &str, price_step: f64) -> Result<OrderBook, String>
+    pub fn from_file(filename: &str, instrument: String, price_step: f64) -> OrderBook
     {
-        let mut orderbook = OrderBook::new(price_step);
+        let mut orderbook = OrderBook::new(instrument, price_step);
         let path = Path::new(filename);
         let display = path.display();
 
         let file = match File::open(&path) {
-            Err(why) => panic!("couldn't open {}: {}", display, Error::to_string(&why)),
+            Err(why) => panic!("Couldn't open {}: {}", display, Error::to_string(&why)),
             Ok(file) => file,
         };
         let reader = BufReader::new(file);
@@ -163,36 +186,33 @@ impl OrderBook
         {
             if let Ok(line) = result
             {
-                orderbook.update(&line).expect(BAD_PATH_TO_FILE);
+                orderbook.update(&line);
             }
         }
         orderbook.clean();
-        Ok(orderbook)
+        orderbook
     }
 
-    pub fn from_str(json: &str, price_step: f64) -> Result<OrderBook, String>
+    pub fn from_str(json: &str, instrument: String, price_step: f64) -> OrderBook
     {
-        let mut orderbook = OrderBook::new(price_step);
+        let mut orderbook = OrderBook::new(instrument, price_step);
         let lines: Vec<String> = json.split("\n").map(|x| x.to_string()).collect();
 
         for line in &lines
         {
-            orderbook.update(line).expect(BAD_STRING);
+            orderbook.update(line);
         }
         orderbook.clean();
-        Ok(orderbook)
+        orderbook
     }
 
     pub fn print_side(&self, _side: Side)
     {
-        let side = match _side {
-            Side::ASK => &self.ask,
-            Side::BID => &self.bid,
+        let (side, text) = match _side {
+            Side::ASK => (&self.ask, "Ask"),
+            Side::BID => (&self.bid, "Bid"),
         };
-        println!("{}:", match _side {
-            Side::ASK => "ASK",
-            Side::BID => "BID",
-        });
+        println!("{text}");
         for (key, value) in side
         {
             let price_level: f64 = (*key as f64) * self.price_step;
@@ -216,6 +236,7 @@ impl OrderBook
 
 #[cfg(test)]
 mod tests {
+    use std::string::String;
     use super::*;
 
     #[test]
@@ -227,7 +248,7 @@ mod tests {
         let price_step: f64 = 0.0025;
         let price_step_inv: f64 = 400.0;
 
-        let info: String = format!("{}\n{}", r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":{"added":[{"id":1,"price":4000.0,"size":1.05}],"changed":[],"deleted":[]}}"#, r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":{"added":[{"id":2,"price":3000.0,"size":1.10}],"changed":[],"deleted":[]}}"#);
+        let info: String = format!("{}\n{}", r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":{"added":[{"id":1,"price":4000.0,"size":1.05}],"changed":[],"deleted":[]}}"#, r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":{"added":[{"id":2,"price":5000.0,"size":1.10}],"changed":[],"deleted":[]}}"#);
         let info: &str = &info;
 
         let mut bid_expected: BTreeMap<i64, VecDeque<L3Quote>> = BTreeMap::new();
@@ -239,13 +260,13 @@ mod tests {
             size: 1.05,
         }].into_iter().collect());
 
-        ask_expected.insert((3000.0*price_step_inv) as i64, vec![L3Quote {
+        ask_expected.insert((5000.0*price_step_inv) as i64, vec![L3Quote {
             id: 2,
-            price: 3000.0,
+            price: 5000.0,
             size: 1.10,
         }].into_iter().collect());
 
-        let orderbook = OrderBook::from_str(info, price_step).expect("Failed to create orderbook");
+        let orderbook = OrderBook::from_str(info, "BTCUSD".to_string(), price_step);
 
         assert_eq!(orderbook.instrument, "BTCUSD".to_string());
         assert_eq!(orderbook.price_step, price_step);
@@ -266,16 +287,16 @@ mod tests {
 
         let mut bid_expected: BTreeMap<i64, VecDeque<L3Quote>> = BTreeMap::new();
         let mut ask_expected: BTreeMap<i64, VecDeque<L3Quote>> = BTreeMap::new();
-        let mut orderbook = OrderBook::new(price_step);
+        let mut orderbook = OrderBook::new("BTCUSD".to_string(), price_step);
 
         let info1: &str = r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":{"added":[{"id":1,"price":4001.0,"size":1.05}],"changed":[],"deleted":[]}}"#;
-        let info2: &str = r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":{"added":[{"id":2,"price":4002.0,"size":1.10}],"changed":[],"deleted":[]}}"#;
+        let info2: &str = r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":{"added":[{"id":2,"price":5002.0,"size":1.10}],"changed":[],"deleted":[]}}"#;
 
         bid_expected.insert((4001.0*price_step_inv) as i64, VecDeque::from([L3Quote{id: 1, price: 4001.0, size: 1.05}]));
-        ask_expected.insert((4002.0*price_step_inv) as i64, VecDeque::from([L3Quote{id: 2, price: 4002.0, size: 1.10}]));
+        ask_expected.insert((5002.0*price_step_inv) as i64, VecDeque::from([L3Quote{id: 2, price: 5002.0, size: 1.10}]));
 
-        orderbook.update_from_string(info1.to_string()).expect(BAD_STRING);
-        orderbook.update_from_string(info2.to_string()).expect(BAD_STRING);
+        orderbook.update_from_string(info1.to_string());
+        orderbook.update_from_string(info2.to_string());
 
         assert_eq!(orderbook.instrument, "BTCUSD".to_string());
         assert_eq!(orderbook.price_step, price_step);
@@ -285,13 +306,13 @@ mod tests {
         assert_eq!(orderbook.ask, ask_expected);
 
         let info3: &str = r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":{"added":[{"id":3,"price":4003.0,"size":1.05}],"changed":[],"deleted":[]}}"#;
-        let info4: &str = r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":{"added":[{"id":4,"price":4004.0,"size":1.10}],"changed":[],"deleted":[]}}"#;
+        let info4: &str = r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":{"added":[{"id":4,"price":5004.0,"size":1.10}],"changed":[],"deleted":[]}}"#;
 
         bid_expected.insert((4003.0*price_step_inv) as i64, VecDeque::from([L3Quote{id: 3, price: 4003.0, size: 1.05}]));
-        ask_expected.insert((4004.0*price_step_inv) as i64, VecDeque::from([L3Quote{id: 4, price: 4004.0, size: 1.10}]));
+        ask_expected.insert((5004.0*price_step_inv) as i64, VecDeque::from([L3Quote{id: 4, price: 5004.0, size: 1.10}]));
 
-        orderbook.update_from_string(info3.to_string()).expect(BAD_STRING);
-        orderbook.update_from_string(info4.to_string()).expect(BAD_STRING);
+        orderbook.update_from_string(info3.to_string());
+        orderbook.update_from_string(info4.to_string());
 
         assert_eq!(orderbook.instrument, "BTCUSD".to_string());
         assert_eq!(orderbook.price_step, price_step);
@@ -301,13 +322,13 @@ mod tests {
         assert_eq!(orderbook.ask, ask_expected);
 
         let info5: &str = r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":{"added":[],"changed":[{"id":3,"price":4003.0,"size":1.06}],"deleted":[]}}"#;
-        let info6: &str = r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":{"added":[],"changed":[{"id":4,"price":4004.0,"size":1.11}],"deleted":[]}}"#;
+        let info6: &str = r#"{"instrument":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":{"added":[],"changed":[{"id":4,"price":5004.0,"size":1.11}],"deleted":[]}}"#;
 
         bid_expected.entry((4003.0*price_step_inv) as i64).and_modify(|v| v[0].size = 1.06);
-        ask_expected.entry((4004.0*price_step_inv) as i64).and_modify(|v| v[0].size = 1.11);
+        ask_expected.entry((5004.0*price_step_inv) as i64).and_modify(|v| v[0].size = 1.11);
 
-        orderbook.update_from_string(info5.to_string()).expect(BAD_STRING);
-        orderbook.update_from_string(info6.to_string()).expect(BAD_STRING);
+        orderbook.update_from_string(info5.to_string());
+        orderbook.update_from_string(info6.to_string());
 
         assert_eq!(orderbook.instrument, "BTCUSD".to_string());
         assert_eq!(orderbook.price_step, price_step);
@@ -323,8 +344,8 @@ mod tests {
         /*
          * This test checks that the orderbook is created correctly from a non-incremental message (SNAPSHOT)
          */
-        let info: &str = r#"{"instrument":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":[]}"#;
-        let _orderbook = OrderBook::from_str(info, 0.0025).expect("Failed to create orderbook from string");
+        let info: &str = r#"{"instrument":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":[{"id":1,"price":4000.0,"size":1.05},{"id":3,"price":4003.0,"size":1.05}]}"#;
+        let _ = OrderBook::from_str(info, "BTCUSD".to_string(), 0.0025);
     }
 
     #[test]
@@ -334,8 +355,7 @@ mod tests {
         /*
          * This test should panic since 'instrument' is misspelled as 'instrumeent'
          */
-        let price_step: f64 = 0.0025;
         let info: &str = r#"{"instrumeent":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":{"added":[{"id":1,"price":4000.0,"size":1.05}],"changed":[],"deleted":[]}}"#;
-        let _orderbook = OrderBook::from_str(info, price_step).expect("Failed to create orderbook from string");
+        let _ = OrderBook::from_str(info, "BTCUSD".to_string(), 0.0025);
     }
 }
