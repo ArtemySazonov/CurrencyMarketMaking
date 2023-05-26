@@ -69,7 +69,6 @@ impl OrderBook
         OrderBook{ instrument, date: "".to_string(), bid: OrderBook::new_side(), ask: OrderBook::new_side(), price_step, price_step_inv: 1./price_step, id_map: HashMap::new() }
     }
 
-    #[inline(always)]
     fn add(&mut self, side_type: &Side, price_step_inv: f64, price: f64, size: f64, id: i64)
     {
         let price_key = (price * price_step_inv) as i64;
@@ -88,7 +87,6 @@ impl OrderBook
         self.id_map.insert(id, price_key);
     }
 
-    #[inline(always)]
     fn remove(&mut self, side_type: &Side, id: i64)
     {
         if let Some(price_level) = self.id_map.get(&id)
@@ -101,7 +99,6 @@ impl OrderBook
         }
     }
 
-    #[inline(always)]
     fn clean(&mut self)
     {
         self.ask.retain(|_k,v| v.len() != 0);
