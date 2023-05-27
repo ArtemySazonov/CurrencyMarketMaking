@@ -54,7 +54,9 @@ pub struct OrderBook
 
     price_step: f64,
     price_step_inv: f64,
-    id_map: HashMap<i64, i64>,
+
+    bid_ids: HashMap<i64, i64>,
+    ask_ids: HashMap<i64, i64>,
 }
 
 impl OrderBook
@@ -66,36 +68,46 @@ impl OrderBook
 
     pub fn new(instrument: String, price_step: f64) -> OrderBook
     {
-        OrderBook{ instrument, date: "".to_string(), bid: OrderBook::new_side(), ask: OrderBook::new_side(), price_step, price_step_inv: 1./price_step, id_map: HashMap::new() }
+        OrderBook{ instrument, date: "".to_string(), bid: OrderBook::new_side(), ask: OrderBook::new_side(), price_step, price_step_inv: 1./price_step, bid_ids: HashMap::new(), ask_ids: HashMap::new() }
     }
 
     fn add(&mut self, side_type: &Side, price_step_inv: f64, price: f64, size: f64, id: i64)
     {
         let price_key = (price * price_step_inv) as i64;
-        match side_type {
-            Side::ASK => self.ask.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
+
+        let (tree, map, text) = match side_type {
+            Side::ASK => (&mut self.ask, &mut self.ask_ids, "ASK"),
+            Side::BID => (&mut self.bid, &mut self.bid_ids, "BID")
+        };
+        if map.get(&id) == None
+        {
+            tree.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
                 id,
                 price,
                 size,
-            }),
-            Side::BID => self.bid.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
-                id,
-                price,
-                size,
-            }),
+            });
+            map.insert(id, price_key);
         }
-        self.id_map.insert(id, price_key);
+        else
+        {
+            panic!("Id exists in {}.", text);
+        }
     }
 
     fn remove(&mut self, side_type: &Side, id: i64)
     {
-        if let Some(price_level) = self.id_map.get(&id)
+        let (tree, map, text) = match side_type {
+            Side::ASK => (&mut self.ask, &mut self.ask_ids, "ASK"),
+            Side::BID => (&mut self.bid, &mut self.bid_ids, "BID")
+        };
+        if let Some(price_level) = map.get(&id)
         {
-            match side_type {
-                Side::ASK => self.ask.entry(*price_level).and_modify(|x| x.retain(|q| q.id != id)),
-                Side::BID => self.bid.entry(*price_level).and_modify(|x| x.retain(|q| q.id != id)),
-            };
-            self.id_map.remove(&id);
+            tree.entry(*price_level).and_modify(|x| x.retain(|q| q.id != id));
+            map.remove(&id);
+        }
+        else
+        {
+            panic!("No such id in {}!", text);
         }
     }
 
@@ -136,7 +148,7 @@ impl OrderBook
 
                 for quote in quotes.changed
                 {
-                    self.remove(&side_type,  quote.id);
+                    self.remove(&side_type, quote.id);
                     self.add(&side_type, self.price_step_inv, quote.price, quote.size, quote.id);
                 }
 
@@ -147,12 +159,12 @@ impl OrderBook
             }
             else
             {
-                panic!("{}", INSTRUMENT_MISMATCH);
+                panic!("{}\n\tFound instrument:    {}\n\tInstrument required: {}\n", INSTRUMENT_MISMATCH, json_line.instrument, self.instrument);
             }
         }
         else
         {
-            panic!("{}", BAD_STRING);
+            panic!("{}\nFound line:\n=================================\n{}\n=================================\n", BAD_STRING, line);
         }
     }
 
