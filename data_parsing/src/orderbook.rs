@@ -115,6 +115,21 @@ impl OrderBook
     {
         self.ask.retain(|_k,v| v.len() != 0);
         self.bid.retain(|_k,v| v.len() != 0);
+        self.check_bid_ask_overlap();
+    }
+
+    fn check_bid_ask_overlap(&self)
+    {
+        if let Some(max_bid) = self.bid.keys().max()
+        {
+            if let Some(min_ask) = self.ask.keys().min()
+            {
+                if max_bid > min_ask
+                {
+                    panic!("Max bid is greater than min ask.");
+                }
+            }
+        }
     }
 
     pub fn update(&mut self, line: &String)
@@ -366,5 +381,19 @@ mod tests {
          */
         let info: &str = r#"{"instrumeent":"BTCUSD","type":"INCREMENT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":{"added":[{"id":1,"price":4000.0,"size":1.05}],"changed":[],"deleted":[]}}"#;
         let _ = OrderBook::from_str(info, "BTCUSD".to_string(), 0.0025);
+    }
+
+    #[test]
+    #[should_panic]
+    fn orderbook_snapshot_from_overlapped_bid_ask()
+    {
+        /*
+         * This test checks that the orderbook is not created from the overlapped bid/ask
+         */
+        let info = concat!(r#"{"instrument":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":[{"id":1,"price":5000.0,"size":1.05},{"id":3,"price":4003.0,"size":1.05}]}"#,
+                                "\n",
+                                r#"{"instrument":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":[{"id":2,"price":5002.0,"size":1.10},{"id":3,"price":4003.0,"size":1.10}]}"#);
+        let ob = OrderBook::from_str(info, "BTCUSD".to_string(), 0.0025);
+        ob.check_bid_ask_overlap();
     }
 }
