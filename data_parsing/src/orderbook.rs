@@ -363,7 +363,7 @@ mod tests {
     }
 
     #[test]
-    fn orderbook_create_non_increment()
+    fn orderbook_create_snapshot()
     {
         /*
          * This test checks that the orderbook is created correctly from a non-incremental message (SNAPSHOT)
