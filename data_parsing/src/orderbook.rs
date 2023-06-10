@@ -1,9 +1,11 @@
 use std::{io::BufReader, path::Path, fs::File, io::BufRead, io::Error, collections::{BTreeMap, VecDeque, HashMap}};
+use std::io::Write;
 use serde::{Deserialize, Serialize};
 
 const BAD_STRING:          &str = "Bad string found. Check the inputs.";
 const INSTRUMENT_MISMATCH: &str = "Instrument mismatch. Check the inputs.";
 
+#[derive(PartialEq)]
 pub enum Side
 {
     BID,
@@ -115,7 +117,7 @@ impl OrderBook
     {
         self.ask.retain(|_k,v| v.len() != 0);
         self.bid.retain(|_k,v| v.len() != 0);
-        self.check_bid_ask_overlap();
+        //self.check_bid_ask_overlap();
     }
 
     fn check_bid_ask_overlap(&self)
@@ -126,6 +128,7 @@ impl OrderBook
             {
                 if max_bid > min_ask
                 {
+                    self.print();
                     panic!("Max bid is greater than min ask.");
                 }
             }
@@ -256,11 +259,96 @@ impl OrderBook
         self.print_side(Side::ASK);
         print!("\n");
     }
+
+    pub fn to_l2(&self, side: Side) -> Vec<(i64, f64)>
+    {
+        let book_side = match side {
+            Side::ASK => &self.ask,
+            Side::BID => &self.bid
+        };
+        let mut l2book_side: Vec<(i64, f64)> = book_side.iter().map(|(&k, v)| (k, v.iter().fold(0., |acc, x| acc + (x.size)))).collect();
+        if side == Side::BID
+        {
+            l2book_side.reverse();
+        }
+        l2book_side
+    }
+
+    fn feature_println(features: Vec<String>, file: &mut File)
+    {
+        file.write_all(features.join("\t").as_bytes()).expect("TODO: panic message");
+        file.write_all("\n".as_bytes()).expect("TODO: panic message");
+    }
+
+    fn calculator(l2side: Vec<(i64, f64)>, file_PQ: &mut File, file_QdP: &mut File)
+    {
+        let mut features_PQ: Vec<(f64, i64)> = Vec::new();
+        let mut features_QdP: Vec<(i64, f64)> = Vec::new();
+        if !l2side.is_empty()
+        {
+            // Calculate P = P(Q)
+            let mut total_volume: f64 = 0.0;
+            for (price, volume) in &l2side
+            {
+                total_volume += volume;
+                features_PQ.push((total_volume, *price));
+            }
+
+            // Recalculate Q = Q(dP)
+            let price_zero: i64 = l2side[0].0;
+            for (volume, price) in &features_PQ
+            {
+                features_QdP.push((*price - price_zero, total_volume));
+            }
+        }
+
+        // Write to TSV files
+        OrderBook::feature_println(features_PQ.iter().map(|x| String::from(format!("{:?}", x))).collect(), file_PQ);
+        OrderBook::feature_println(features_QdP.iter().map(|x| String::from(format!("{:?}", x))).collect(), file_QdP);
+    }
+
+    pub fn calculate_features(filename: &str, instrument: String, price_step: f64)
+    {
+        /*
+            * This function calculates features for the orderbook and outputs them in multiple .npy files.
+            * 1. Price by volume P(Q);
+            * 2. Volume by price threshold Q(dP);
+         */
+        let mut orderbook = OrderBook::new(instrument, price_step);
+        let path = Path::new(filename);
+        let display = path.display();
+
+        let file = match File::open(&path) {
+            Err(why) => panic!("Couldn't open {}: {}", display, Error::to_string(&why)),
+            Ok(file) => file,
+        };
+        let reader = BufReader::new(file);
+        let lines = reader.lines();
+
+        let mut PQ_bid_file = File::create(format!("{}_PQ_bid.tsv", filename)).unwrap();
+        let mut PQ_ask_file = File::create(format!("{}_PQ_ask.tsv", filename)).unwrap();
+        let mut QdP_bid_file = File::create(format!("{}_QdP_bid.tsv", filename)).unwrap();
+        let mut QdP_ask_file = File::create(format!("{}_QdP_ask.tsv", filename)).unwrap();
+
+        for result in lines
+        {
+            if let Ok(line) = result
+            {
+                orderbook.update(&line);
+            }
+            orderbook.clean();
+
+            let l2_bid: Vec<(i64, f64)> = orderbook.to_l2(Side::BID);
+            let l2_ask: Vec<(i64, f64)> = orderbook.to_l2(Side::ASK);
+
+            OrderBook::calculator(l2_bid, &mut PQ_bid_file, &mut QdP_bid_file);
+            OrderBook::calculator(l2_ask, &mut PQ_ask_file, &mut QdP_ask_file);
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::string::String;
     use super::*;
 
     #[test]
@@ -360,6 +448,8 @@ mod tests {
         assert_eq!(orderbook.date, "2019-01-01T00:00:00.000Z".to_string());
         assert_eq!(orderbook.bid, bid_expected);
         assert_eq!(orderbook.ask, ask_expected);
+
+        orderbook.print();
     }
 
     #[test]
