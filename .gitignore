@@ -1,4 +1,5 @@
-
 .DS_Store
 data_parsing/.idea/*
 data_parsing/target/*
+md_vega_mm_2023_spring/*
+PDFs/*
