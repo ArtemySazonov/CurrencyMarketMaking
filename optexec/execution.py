@@ -17,22 +17,13 @@ class TWAP():
         self.clock = 0
         self.tau = T/N
         
-        idx = np.randint(X - int(X/N)*N)
+        idx = np.random.randint(low = 0, high = N, size = X - int(X/N)*N)
         self.trading_list = np.ones(N)*int(X/N)
         self.trading_list[idx]+=1
 
-        assert np.sum(self.trading_list) == self.X
-
-
-    def train(features: OnlineData):
+    def cumulative_impact(orderbook: OnlineData):
         raise(NotImplementedError)
 
-    def start():
-        raise(NotImplementedError)
-
-    def stop():
-        raise(NotImplementedError)
-    
     def reset(self):
         self.__init__(self.T, self.N, self.X)
     

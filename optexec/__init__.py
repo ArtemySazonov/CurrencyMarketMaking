@@ -1,6 +1,19 @@
-from . import dataloader
-from . import execution
+import dataloader
+import execution
+
+import unittest
+import numpy as np
+
+class TestTWAP(unittest.TestCase):
+    def setUp(self):
+        self.strategy = execution.TWAP(1, 100, 100)
+
+    def test_initialization(self):
+        """
+            Test: executed volume is equal to the initial one
+        """        
+        assert np.sum(self.strategy.trading_list) == self.strategy.X
+    
 
 if __name__ == "__main__":
-    print("This is a module. Please, import it via the following command:\n\n> import optexec\n")
-    exit(-1)
+    unittest.main()
