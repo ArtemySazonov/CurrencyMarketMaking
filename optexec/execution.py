@@ -6,7 +6,7 @@ from dataloader import OnlineData
 
 @njit
 def sigma_2_rho(ret):
-    return np.var(ret)
+    return sqrt(np.var(ret))
 
 class TWAP_model:
     """
@@ -68,7 +68,7 @@ class AC_model:
         self.T = T
         self.L = L 
         self.W = W
-        self.W_remain = W
+        self.W_remain = np.copy(W)
         self.num_of_rounds = W.shape[0]
         self.tau = (1.*T)/L
         self.gamma = gamma
