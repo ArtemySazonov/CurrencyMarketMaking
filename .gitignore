@@ -1,10 +1,13 @@
 .DS_Store
 
-md_vega_mm_2023_spring/*
-PDFs/*
+build/
 
-data_parsing/.idea/*
-data_parsing/target/*
+md_vega_mm_2023_spring/
+PDFs/
+report/document.pdf
+
+data_parsing/.idea/
+data_parsing/target/
 
 data_parsing/data/USD_RUB_T+1__2022-11-10_PQ_ask.tsv
 data_parsing/data/USD_RUB_T+1__2022-11-10
@@ -15,3 +18,25 @@ data_parsing/data/USD_RUB_T+1__2022-11-10_QdP_bid.tsv
 optexec/__pycache__
 
 backup.py
+
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.toc
+*.ini
+*.lot
+*.lof
+*.pyc
+*.pygtex
+*.pygstyle
+
+_minted-document

@@ -1,0 +1,2 @@
+project(CurrencyMarketMaking_FeaturesCalculator)
+
