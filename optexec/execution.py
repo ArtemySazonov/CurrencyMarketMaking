@@ -118,8 +118,8 @@ class AC_model:
             sigma = sigma_2_rho(ret[:rho + 1]) + 1e-8
         return ACPR/self.num_of_rounds
     
-        def reset(self):
-            self.__init__(self.T, self.L, self.W, self.lamb, self.eta,  self.init_sigma, self.gamma)
+    def reset(self):
+        self.__init__(self.T, self.L, self.W, self.lamb, self.eta,  self.init_sigma, self.gamma)
 
 
 class GLOBE_model:
