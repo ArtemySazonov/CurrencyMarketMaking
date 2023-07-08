@@ -2,15 +2,15 @@ import numpy as np
 from numba import njit
 from math import sqrt, sinh, cosh, acosh, log, exp
 
-from dataloader import OnlineData
+from . import dataloader
 
 @njit
 def sigma_2_rho(ret):
     return sqrt(np.var(ret))
 
-class TWAP_model:
+class TWAP:
     """
-    Time-Weighted Average Price strategy
+        Time-Weighted Average Price strategy
     """  
     def __init__(self, T: int, L: int, W: np.ndarray) -> None:
 
@@ -28,10 +28,9 @@ class TWAP_model:
         self.trading_list = (np.ones(shape = (self.num_of_rounds, L), dtype = int).T*(W//L)).T
         self.trading_list[:,-1]+=(W - (W//L)*L)
 
-    def cumulative_impact(self, orderbook_bid: OnlineData, orderbook_ask: OnlineData):
-
+    def cumulative_impact(self, orderbook_bid: dataloader.OnlineData, orderbook_ask: dataloader.OnlineData):
         """ 
-        Averaged Cost Per Round metric
+            Average Cost Per Round metric
         """
         ACPR = 0.
         dt = np.ediff1d(np.linspace(start = 0, stop = self.T, num = self.L, endpoint=True, dtype = int), to_begin=0)
@@ -58,7 +57,7 @@ def A_l_star(lamb, eta, sigma, W_rho, L, l , gamma = 0. ):
     A = 2.*sinh(kappa/2.)*cosh(kappa * (L - l + 0.5) )*W_rho/ sinh(kappa * L)
     return A
 
-class AC_model:
+class AC:
     def __init__(self, T: int, L: int, W: np.ndarray, lamb: float, eta: float, init_sigma: float, gamma: float = 0):
         if T <= 0 or L <= 0:
             raise(ValueError)
@@ -76,10 +75,9 @@ class AC_model:
         self.lamb = lamb
         self.init_sigma = init_sigma
 
-    def cumulative_impact(self, orderbook_bid: OnlineData, orderbook_ask: OnlineData):
-
+    def cumulative_impact(self, orderbook_bid: dataloader.OnlineData, orderbook_ask: dataloader.OnlineData):
         """ 
-        Averaged Cost Per Round metric
+        Average Cost Per Round metric
         """
         ACPR = 0.
         ret = np.empty(shape = self.num_of_rounds)
@@ -122,7 +120,7 @@ class AC_model:
         self.__init__(self.T, self.L, self.W, self.lamb, self.eta,  self.init_sigma, self.gamma)
 
 
-class GLOBE_model:
+class GLOBE:
     """
     Greedy exploitation in Limit Order Book Execution
 
@@ -137,7 +135,7 @@ class GLOBE_model:
         self.init_sigma = init_sigma
 
 
-    def train(features: OnlineData):
+    def train(features: dataloader.OnlineData):
         raise(NotImplementedError)
 
     def start():
