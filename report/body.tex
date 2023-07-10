@@ -1,11 +1,39 @@
-\section{Online machine learning and reinforcement learning}
-    Online machine learning, also known as incremental or sequential learning, is a type of machine learning where models are learned and improved over time as new data becomes available. Rather than training a model on a fixed dataset all at once, online machine learning allows the model to adapt and evolve in response to changing conditions.
+\section{Online machine learning and reinforcement learning}\label{section:OMLandRL}
+    In recent years, online machine learning and reinforcement learning have gained significant attention in the field of optimal trade execution. These approaches leverage the power of algorithms and data to continuously learn and adapt execution strategies in real-time, with the goal of achieving optimal trade outcomes.
 
-    One of the main benefits of online machine learning is that it can reduce the amount of time and computational resources required for training and updating a model. Rather than starting from scratch each time new data is added, the model can build on previous knowledge, leading to more efficient learning.
+    Online machine learning, also known as incremental or streaming machine learning, allows for the learning process to occur as new data becomes available. Unlike batch learning, where the algorithm is trained on a fixed dataset, online learning algorithms update their models iteratively, dynamically incorporating new observations into the learning process. This flexibility makes online machine learning well-suited for trade execution, where market conditions change rapidly and the ability to adapt quickly is crucial.
+
+    Reinforcement learning, a subset of online machine learning, is particularly relevant in the context of optimal trade execution. Reinforcement learning algorithms learn through trial and error interactions with an environment, aiming to maximize a reward signal. In the case of trade execution, the algorithm interacts with the market and aims to optimize execution performance by maximizing rewards such as profitability, minimizing transaction costs, or reducing market impact.
+
+    One key advantage of reinforcement learning is its ability to handle complex, dynamic environments without relying on pre-defined rules or models. Reinforcement learning agents learn from experience, exploring different execution strategies and adjusting their actions based on the feedback received. This adaptability allows them to capture non-linear relationships and exploit patterns in the market, potentially leading to improved execution performance.
+
+    However, applying online machine learning and reinforcement learning to trade execution also poses challenges. One of the primary challenges is data quality and availability. To train and fine-tune algorithms effectively, high-quality data that accurately represents market conditions is essential. Additionally, the presence of noisy or incomplete data can impact the learning process and the reliability of the execution strategies.
+
+    Furthermore, the selection of appropriate features and state representation is critical in capturing the relevant information for trade execution. Different market factors, such as liquidity, volatility, and order book dynamics, should be carefully considered to construct informative features that drive the learning process.
+
+    Another challenge is the delicate balance between exploration (trying out new actions to gather data and learn) and exploitation (leveraging learned knowledge for optimal decision-making). In trade execution, this balance becomes crucial, as excessive exploration may result in increased risk or missed trading opportunities, while excessive exploitation may hinder the agent from adapting to changing market conditions.
+
+    Moreover, the deployment of online machine learning or reinforcement learning algorithms in real-time trading environments introduces additional concerns. The algorithms must be able to handle high-frequency data, process information quickly, and make decisions within tight time constraints. Furthermore, risk management and constraints, such as obtaining desired trade volumes within specified time horizons or complying with regulatory requirements, need to be incorporated into the algorithm design.
+
+    Despite these challenges, the application of online machine learning and reinforcement learning to optimal trade execution holds promise. The ability to learn and adapt in real-time, exploit market patterns, and optimize trade outcomes makes these approaches appealing for market participants aiming to enhance their execution strategies. As research and technology continue to advance, the integration of online machine learning and reinforcement learning techniques into trade execution algorithms is expected to be an active area of exploration and development.
+
+    In the realm of online machine learning and reinforcement learning, another powerful tool used for optimizing trade execution is Markov Decision Processes (MDPs). MDPs provide a mathematical framework for modeling decision-making processes in stochastic environments, where the outcomes of actions are uncertain. 
+    Formally, an MDP is defined by a tuple $(\mathcal S, \mathcal A, P, R)$, where:
+    \begin{itemize}
+        \item $\mathcal S$ represents the set of states in the environment;
+        \item $\mathcal A$ represents the set of actions that can be taken;
+        \item $P$ is the transition function, which defines the probability distribution of transitioning from one state to another after taking a specific action;
+        \item $R$ is the reward function, which quantifies the desirability or utility of being in a particular state or taking a specific action.
+    \end{itemize}
+
+    The goal in an MDP is to find a policy that maximizes the expected cumulative reward over time. A policy, denoted by $\pi$ or $\nu$, is a (possibly, stochastic) mapping from states to actions, indicating the action to be taken in each state. 
+
+    In the context of optimal trade execution, Markov Decision Processes provide a framework for modeling the dynamic nature of financial markets, considering the uncertainties involved in price fluctuations and trade executions. By formulating the trade execution problem as an MDP, reinforcement learning algorithms can be applied to learn optimal trading strategies that maximize expected profits while minimizing transaction costs.
 
 
-\section{Electronic market making}
-    We need to define the market making problem in the market. As it was stated in \cite{Cartea2015} and \cite{Bouchaud2018},
+\section{Electronic market making}\label{section:ElectronicMM}
+    We need to understand the core of the optimal execution problem in the market. 
+    As it was stated in \cite{Cartea2015} and \cite{Bouchaud2018},
     the objective of the electronic market is to match the buy and sell orders 
     of the market participants. In practice we can divide all orders to 
     the two groups: \emph{market orders} (MO) and \emph{limit orders} (LO). 
@@ -58,11 +86,11 @@
             \item Liquidity traders are those, who are forced (by their strategy) to exploit the market orthogonally to major events;
         \end{itemize}
         \item \emph{Informed traders}: those traders, who profit from some insider knowledge, a.k.a. information, which is not reflected in the prices;
-        \item \emph{Market makers}: professional traders, who have a market power;
+        \item \emph{Market makers}: professional traders, owners of the market power;
         \item Sometimes, the \emph{arbitrageurs} are differentiated as a fourth group. However, they might be considered to be a subclass of the informed traders.
     \end{enumerate}
 
-\section{Optimal Execution Algorithms}
+\section{Optimal Execution Algorithms}\label{section:OptExecAlgos}
     \subsection{Preliminary Information}
         First of all, we can neglect the time value of money since we are working in the high-frequency
         trading world, i.e. the money do not lose any value in our scale. Therefore, $\gamma \equiv 1$.
@@ -247,7 +275,7 @@
             \end{algorithm}
 
 
-\section{Practical Problems and Backtesting}
+\section{Practical Problems and Backtesting}\label{section:Backtest}
     \subsection{Data collection}
         We obtained the L3 quote data for the four currency pairs from the MOEX:
         \begin{enumerate}
