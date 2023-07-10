@@ -18,6 +18,7 @@ data_parsing/data/USD_RUB_T+1__2022-11-10_QdP_bid.tsv
 data/
 
 optexec/__pycache__
+optexec/.pytest_cache
 
 backup.py
 

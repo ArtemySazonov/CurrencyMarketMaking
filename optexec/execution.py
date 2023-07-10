@@ -2,6 +2,8 @@ import numpy as np
 from numba import njit
 from math import sqrt, sinh, cosh, acosh, log, exp
 
+import pytest
+
 from . import dataloader
 
 @njit
@@ -49,6 +51,28 @@ class TWAP:
             
     def reset(self):
         self.__init__(self.T, self.L, self.W)
+
+##############################################################################
+# Time-weighted Average Price Unit Tests
+##############################################################################
+
+def test_TWAP_init1():
+    strategy1 = TWAP(2000, 100, np.array([100]))
+    print("Testing for the correct TWAP intialisation with T = 2000, L = 100, W = 100")
+    assert np.sum(strategy1.trading_list) == strategy1.W[0]
+
+def test_TWAP_init2():
+    strategy2 = TWAP(2000, 1003, np.array([100]))
+    print("Testing for the correct TWAP intialisation with T = 2000, L = 1003, W = 100")
+    assert np.sum(strategy2.trading_list) == strategy2.W[0]
+
+def test_TWAP_init3():
+    strategy3 = TWAP(2000, 100, np.array([1003]))
+    print("Testing for the correct TWAP intialisation with T = 2000, L = 100, W = 1003")
+    assert np.sum(strategy3.trading_list) == strategy3.W[0]
+
+##############################################################################
+##############################################################################
 
 @njit
 def A_l_star(lamb, eta, sigma, W_rho, L, l , gamma = 0. ):
