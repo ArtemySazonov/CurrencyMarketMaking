@@ -65,8 +65,8 @@
     Now we are ready to formulate the \emph{optimal execution problem}: liquidate the position by minimizing the functional of the price impact and the market risk. 
     Let us write this problem in terms of stochastic optimal control.
 
-    Let us have $W$ lots of an asset in the long position that we need to sell during time $T$ from now.
-    Let us have $L$ stock exchange ticks and we define the \emph{liquidation times} $t_k = k\tau$, $\tau = T/L$.
+    Let us have $W$ lots of an asset in the long position that we need to sell during time $T$ (measured in ticks) from now.
+    There are $L$ liquidation intervals and we define the \emph{liquidation times} $t_k = k\tau$, $\tau = T/L$.
     \begin{definition}\label{definition:tradingtrajectory}
         The \emph{trading trajectory} is a process $(w_k)_{k = 0, \dots, L}$, where $w_k$ is a number of lots we 
         still posess at time $t_k$. Alternatively, we can define the \emph{trade list} $n_k = \Delta w_k$, $k = 1, \dots, L$ as a 
@@ -96,7 +96,7 @@
         trading world, i.e. the money do not lose any value in our scale. Therefore, $\gamma \equiv 1$.
 
         Our trading bot has the following set of actions:
-        \begin{itemize}
+        \begin{itemize}\label{page:actions}
             \item Hold;
             \item Sell 1 lot of the asset;
             \item Sell 2 lots of the asset;
@@ -169,7 +169,6 @@
             \mathbb{E}\left[\operatorname{IS}\right] + \lambda \var \operatorname{IS} \to \min.
         \end{equation}
         If $\lambda > 0$, then the strategy becomes risk-averse: we try to select actions which do not dramatically change the variance.
-
         The optimal policy for the case of the linear impact functions: $g(A_l) = \gamma A_l$ and $h(A_l) = \eta A_l$:
         \begin{equation*}
             A_l^* = \frac{2\sinh \frac{\kappa}{2}}{\sinh \kappa L}\cosh\left(\kappa (L-l+0.5)\right) W,
@@ -213,7 +212,8 @@
                             \mu_\rho = \frac{1}{\rho-1}\sum_{j=1}^{\rho-1}\operatorname*{Ret}(j).
                         \end{equation*}
                     \item We define the joint state in time slot $l$ of round $\rho$ as $S_l^\rho = (I_l^\rho, M_l^\rho)$.
-                    \item The action set is based on the AC algorithm. In our case, this model defines 
+                    \item The action set is defined as $\mathcal A = \{0, \dots, W_{\text{max}}\}$, where $a_l^\rho \in \mathcal A$ is the action taken in time slot $l$ of round $\rho$. For more details, check p. \pageref{page:actions}. In each round, a sequence of actions is selected with the aim
+                    of maximizing the revenue.
                 \end{itemize}
             \end{enumerate}
 
@@ -329,10 +329,10 @@
     \subsection{Backtesting the algorithms}
         \begin{figure}[htbp]
             \includegraphics[width=\textwidth]{twap_acpr.pdf}
-            \caption{TWAP ACPR dynamics as a function of frequency of trading. $T = 200$.}
+            \caption{TWAP ACPR as a function of frequency of trading. $T = 200$.}
         \end{figure}
 
         \begin{figure}[htbp]
             \includegraphics[width=\textwidth]{ac_acpr.pdf}
-            \caption{Almgren-Chriss ACPR dynamics as a function of frequency of trading. $T = 200$.}
+            \caption{Almgren-Chriss ACPR as a function of frequency of trading. $T = 200$.}
         \end{figure}
