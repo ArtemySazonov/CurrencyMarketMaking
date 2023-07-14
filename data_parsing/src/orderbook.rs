@@ -73,14 +73,19 @@ impl OrderBook
         OrderBook{ instrument, date: "".to_string(), bid: OrderBook::new_side(), ask: OrderBook::new_side(), price_step, price_step_inv: 1./price_step, bid_ids: HashMap::new(), ask_ids: HashMap::new() }
     }
 
+    fn match_side_type(&mut self, side_type: &Side) -> (&mut BTreeMap<i64, VecDeque<L3Quote>>, &mut HashMap<i64, i64>, &'static str)
+    {
+        match side_type {
+            Side::ASK => (&mut self.ask, &mut self.ask_ids, "ASK"),
+            Side::BID => (&mut self.bid, &mut self.bid_ids, "BID")
+        }
+    }
+
     fn add(&mut self, side_type: &Side, price_step_inv: f64, price: f64, size: f64, id: i64)
     {
         let price_key = (price * price_step_inv) as i64;
 
-        let (tree, map, text) = match side_type {
-            Side::ASK => (&mut self.ask, &mut self.ask_ids, "ASK"),
-            Side::BID => (&mut self.bid, &mut self.bid_ids, "BID")
-        };
+        let (tree, map, text) = self.match_side_type(side_type);
         if map.get(&id) == None
         {
             tree.entry(price_key).or_insert(VecDeque::new()).push_back(L3Quote {
@@ -98,10 +103,7 @@ impl OrderBook
 
     fn remove(&mut self, side_type: &Side, id: i64)
     {
-        let (tree, map, text) = match side_type {
-            Side::ASK => (&mut self.ask, &mut self.ask_ids, "ASK"),
-            Side::BID => (&mut self.bid, &mut self.bid_ids, "BID")
-        };
+        let (tree, map, text) = self.match_side_type(side_type);
         if let Some(price_level) = map.get(&id)
         {
             tree.entry(*price_level).and_modify(|x| x.retain(|q| q.id != id));
@@ -117,7 +119,7 @@ impl OrderBook
     {
         self.ask.retain(|_k,v| v.len() != 0);
         self.bid.retain(|_k,v| v.len() != 0);
-        //self.check_bid_ask_overlap();
+        //self.check_bid_ask_overlap();                                                             //Commented out since not needed
     }
 
     fn check_bid_ask_overlap(&self)
@@ -140,7 +142,15 @@ impl OrderBook
         let result: Result<Tick, serde_json::Error> = serde_json::from_str(line);
         if let Ok(json_line) = result
         {
-            let (side, side_type) = if json_line.side == String::from("BID") { (&mut self.bid, Side::BID) } else { (&mut self.ask, Side::ASK) };
+            let (side, side_type) =
+                if json_line.side == String::from("BID")
+                {
+                    (&mut self.bid, Side::BID)
+                }
+                else
+                {
+                    (&mut self.ask, Side::ASK)
+                };
             if self.instrument == json_line.instrument
             {
                 self.date = json_line.date;
@@ -280,31 +290,35 @@ impl OrderBook
         file.write_all("\n".as_bytes()).expect("TODO: panic message");
     }
 
-    fn calculator(l2side: Vec<(i64, f64)>, file_PQ: &mut File, file_QdP: &mut File)
+    fn calculator(l2side: Vec<(i64, f64)>) -> (Vec<(f64, i64)>, Vec<(i64, f64)>)
     {
-        let mut features_PQ: Vec<(f64, i64)> = Vec::new();
-        let mut features_QdP: Vec<(i64, f64)> = Vec::new();
+        let mut features_pq: Vec<(f64, i64)> = Vec::new();
+        let mut features_q_dp: Vec<(i64, f64)> = Vec::new();
         if !l2side.is_empty()
         {
             // Calculate P = P(Q)
             let mut total_volume: f64 = 0.0;
             for (price, volume) in &l2side
             {
-                total_volume += volume;
-                features_PQ.push((total_volume, *price));
+                total_volume += volume * 1e-6;
+                features_pq.push((total_volume, *price));
             }
 
             // Recalculate Q = Q(dP)
             let price_zero: i64 = l2side[0].0;
-            for (volume, price) in &features_PQ
+            for (volume, price) in &features_pq
             {
-                features_QdP.push((*price - price_zero, total_volume));
+                features_q_dp.push((*price - price_zero, *volume));
             }
         }
+        (features_pq, features_q_dp)
+    }
 
+    pub fn writer(features_pq: Vec<(f64, i64)>, features_q_dp: Vec<(i64, f64)>, pq_file: &mut File, q_dp_file: &mut File)
+    {
         // Write to TSV files
-        OrderBook::feature_println(features_PQ.iter().map(|x| String::from(format!("{:?}", x))).collect(), file_PQ);
-        OrderBook::feature_println(features_QdP.iter().map(|x| String::from(format!("{:?}", x))).collect(), file_QdP);
+        OrderBook::feature_println(features_pq.iter().map(|x| String::from(format!("{:?}", x))).collect(), pq_file);
+        OrderBook::feature_println(features_q_dp.iter().map(|x| String::from(format!("{:?}", x))).collect(), q_dp_file);
     }
 
     pub fn calculate_features(filename: &str, instrument: String, price_step: f64)
@@ -325,10 +339,10 @@ impl OrderBook
         let reader = BufReader::new(file);
         let lines = reader.lines();
 
-        let mut PQ_bid_file = File::create(format!("{}_PQ_bid.tsv", filename)).unwrap();
-        let mut PQ_ask_file = File::create(format!("{}_PQ_ask.tsv", filename)).unwrap();
-        let mut QdP_bid_file = File::create(format!("{}_QdP_bid.tsv", filename)).unwrap();
-        let mut QdP_ask_file = File::create(format!("{}_QdP_ask.tsv", filename)).unwrap();
+        let mut pq_bid_file = File::create(format!("{}_PQ_bid.tsv", filename)).unwrap();
+        let mut pq_ask_file = File::create(format!("{}_PQ_ask.tsv", filename)).unwrap();
+        let mut q_dp_bid_file = File::create(format!("{}_QdP_bid.tsv", filename)).unwrap();
+        let mut q_dp_ask_file = File::create(format!("{}_QdP_ask.tsv", filename)).unwrap();
 
         for result in lines
         {
@@ -341,8 +355,11 @@ impl OrderBook
             let l2_bid: Vec<(i64, f64)> = orderbook.to_l2(Side::BID);
             let l2_ask: Vec<(i64, f64)> = orderbook.to_l2(Side::ASK);
 
-            OrderBook::calculator(l2_bid, &mut PQ_bid_file, &mut QdP_bid_file);
-            OrderBook::calculator(l2_ask, &mut PQ_ask_file, &mut QdP_ask_file);
+            let (features_pq, features_q_dp) = OrderBook::calculator(l2_bid);
+            OrderBook::writer(features_pq, features_q_dp, &mut pq_bid_file, &mut q_dp_bid_file);
+
+            let (features_pq, features_q_dp) = OrderBook::calculator(l2_ask);
+            OrderBook::writer(features_pq, features_q_dp, &mut pq_ask_file, &mut q_dp_ask_file);
         }
     }
 }
@@ -463,6 +480,26 @@ mod tests {
     }
 
     #[test]
+    fn orderbook_features()
+    {
+        let info: &str = r#"{"instrument":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":[{"id":1,"price":4000.0,"size":1.00},{"id":3,"price":4003.0,"size":1.05}]}"#;
+        let orderbook = OrderBook::from_str(info, "BTCUSD".to_string(), 0.0025);
+        let l2_bid: Vec<(i64, f64)> = orderbook.to_l2(Side::BID);
+        let (features_pq, features_q_dp) = OrderBook::calculator(l2_bid);
+        let features_pq_expected = vec![(1.05e-6, 1601200i64), (2.05e-6, 1600000i64)];
+        let features_q_dp_expected = vec![(0i64, 1.05e-6),(-1200i64, 2.05e-6)];
+
+        println!("{:?}", features_pq);
+        println!("{:?}", features_pq_expected);
+
+        for i in 0..2
+        {
+            assert_eq!(features_pq_expected[i], features_pq[i]);
+            assert_eq!(features_q_dp_expected[i], features_q_dp[i]);
+        }
+    }
+
+    #[test]
     #[should_panic]
     fn orderbook_create_from_incorrect_json()
     {
@@ -481,8 +518,8 @@ mod tests {
          * This test checks that the orderbook is not created from the overlapped bid/ask
          */
         let info = concat!(r#"{"instrument":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":[{"id":1,"price":5000.0,"size":1.05},{"id":3,"price":4003.0,"size":1.05}]}"#,
-                                "\n",
-                                r#"{"instrument":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":[{"id":2,"price":5002.0,"size":1.10},{"id":3,"price":4003.0,"size":1.10}]}"#);
+        "\n",
+        r#"{"instrument":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"ASK","quotes":[{"id":2,"price":5002.0,"size":1.10},{"id":3,"price":4003.0,"size":1.10}]}"#);
         let ob = OrderBook::from_str(info, "BTCUSD".to_string(), 0.0025);
         ob.check_bid_ask_overlap();
     }
