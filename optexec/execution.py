@@ -1,10 +1,10 @@
 import numpy as np
-from numba import njit, int64
+from numba import njit, int64, prange
 from math import sqrt, sinh, cosh, acosh, log, exp
 
 import pytest
 
-from . import dataloader
+import dataloader
 
 @njit
 def sigma_2_rho(ret):
@@ -88,7 +88,7 @@ def A_l_star(lamb, eta, sigma, W_rho, L, l , gamma = 0. ):
 
 
 @njit
-def cumpute_Al(lamb, eta, sigma, W, L, gamma = 0):
+def compute_Al(lamb, eta, sigma, W, L, gamma = 0):
     W_remain = W
     A = np.empty(L, dtype = int64)
     for l in range(L - 1):
@@ -143,7 +143,7 @@ class AC:
             pr1 = (F2(1) + F1(1))/2
             prW = pr1 * self.W[rho]
             S = 0
-            A = cumpute_Al(self.lamb, self.eta, sigma, self.W[rho], self.L, self.gamma)
+            A = compute_Al(self.lamb, self.eta, sigma, self.W[rho], self.L, self.gamma)
 
             for l in range(0, self.L):
 
@@ -170,7 +170,7 @@ class AC:
 def Cx(state, a, W, pr, sigma, B):
     return a*(B/2 - state*sigma)/(W*pr)
 
-@njit
+@njit(parallel = True)
 def optimal_policy(A, P, M, W_max, pr, B, sigma, W, Policies):
 
     L = A.shape[0]
@@ -182,8 +182,8 @@ def optimal_policy(A, P, M, W_max, pr, B, sigma, W, Policies):
             V[i, j] = Cx(m, i, W, pr, sigma, B)
     
     for l in range(L-2, -1, -1):
-        for j,m in enumerate(M):
-            CX_a = Cx(m, A[l], W, pr, sigma, B)
+        for j in prange(len(M)):
+            CX_a = Cx(M[j], A[l], W, pr, sigma, B)
             CX_0 = 0
             for i in range(W_max + 1):
                 S1 = CX_a
@@ -229,23 +229,26 @@ class GLOBE:
 
     """    
     def __init__(self, T: int, L: int, W: np.ndarray, lamb: float, eta: float, init_sigma: float,
-                 W_max: int, M: list = [], Mr: list = []) -> None:
+                 W_max: int, M: list = [], Mr: list = [], K: float = 1.) -> None:
         self.T = T
         self.L = L
-        self.W = W
+        self.W = np.copy(W)
         self.W_remain = np.copy(W)
-        self.M = M
-        self.Mr = Mr
+
+        self.M = M.copy()
+        self.Mr = Mr.copy()
         self.num_of_rounds = W.shape[0]
         self.init_sigma = init_sigma
         self.W_max = W_max
         self.lamb = lamb
         self.eta = eta
+        self.K = K
     
     def estimate_parameters(self, orderbook_bid: dataloader.OnlineData, orderbook_ask: dataloader.OnlineData, ret: np.ndarray = None,
                              rounds_for_est: int = 0):
         
         m = min(2, rounds_for_est)
+        K = self.K
 
 
         if ret is None and rounds_for_est > 0:
@@ -275,7 +278,7 @@ class GLOBE:
             for l in range(self.T):
                 F2 = next(orderbook_ask)
                 F1 = next(orderbook_bid)
-                state = int( (F1(1)  - pb1)/sigma  )
+                state = int( (F1(1)  - pb1)/(sigma*K)  )
                 if state not in self.M:
                     self.M.append(state)
 
@@ -295,10 +298,16 @@ class GLOBE:
         P = np.empty_like(N)
         Policies = np.empty(shape = (self.L, self.W_max + 1, len(self.M)))
 
+        K = self.K
+
+        M = np.array(self.M)
+        Mr = np.array(self.Mr)
+
+
 
         for rho in range(self.num_of_rounds):
 
-            update_P(N, N1, self.M, self.Mr, P)
+            update_P(N, N1, M, Mr, P)
 
             F2 = next(orderbook_ask)
             F1 = next(orderbook_bid)
@@ -309,8 +318,8 @@ class GLOBE:
             B = F2(1) - F1(1)
 
             sigma = sigma_2_rho(ret[:rounds_for_est + rho]) + 1e-8
-            A = cumpute_Al(self.lamb, self.eta, sigma, self.W[rho], self.L)
-            optimal_policy(A, P, self.M, self.W_max, pr1, B, sigma, self.W[rho], Policies)
+            A = compute_Al(self.lamb, self.eta, sigma, self.W[rho], self.L)
+            optimal_policy(A, P, M, self.W_max, pr1, B, sigma, self.W[rho], Policies)
 
 
             for l in range(0, self.L):
@@ -319,9 +328,11 @@ class GLOBE:
                     next(orderbook_ask)
 
                 F1 = iter(orderbook_bid).F
-                state = int( (F1(1) - pb1)/sigma )
+                state = int( (F1(1) - pb1)/ (sigma*K) )
                 states[l] = state
-                m = self.M.index(state)
+
+                m = np.where(M == state)[0][0]
+
                 pi = Policies[l, self.W_remain[rho], m]
                 S+=iter(orderbook_bid).F(pi)
                 self.W_remain[rho] -= pi
@@ -332,9 +343,12 @@ class GLOBE:
             ACPR += (1 - S/(prW))
             prL = (F2(1) + F1(1))/2
             ret[rho + rounds_for_est] = log(prL/pr1)
-            update_N(self.M, self.Mr, N, N1, states)
+            update_N(M, Mr, N, N1, states)
 
         return ACPR/self.num_of_rounds
+    
+
+
     
     def reset(self):
         self.__init__(self.T, self.L, self.W, self.lamb, self.eta, self.init_sigma, self.W_max, self.M, self.Mr)
