@@ -5,6 +5,7 @@ build/
 md_vega_mm_2023_spring/
 PDFs/
 report/document.pdf
+Conference\ 2023\ Materials/poster/OnlineMLforOptimalExecution.pdf
 
 data_parsing/.idea/
 data_parsing/target/
@@ -40,5 +41,6 @@ backup.py
 *.pyc
 *.pygtex
 *.pygstyle
+*.vrb
 
-_minted-document
+_minted-*
