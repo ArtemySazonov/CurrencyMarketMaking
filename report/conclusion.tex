@@ -5,7 +5,7 @@
         \item Almgren-Chriss model with linear impact functions;
         \item Greedy exploration in Limit Order Book Execution.
     \end{enumerate}
-    We found out that TWAP is the most versatile of them all, but is far from being the optimal one. 
+    We found out that TWAP is the most versatile of them all, but is not being the optimal one (given the parameters for the AC and GLOBE algorithms are estimated correctly). 
     The AC model has the closed-form solution for the strategy only in case of the 
     linear price impact functions, and it's optimal strategy is deterministic.
     The underlying assumptions of the GLOBE algorithm do not allow us to use it for the high-frequency trading, and in 
