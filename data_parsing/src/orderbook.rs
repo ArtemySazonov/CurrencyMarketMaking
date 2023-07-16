@@ -137,53 +137,61 @@ impl OrderBook
         }
     }
 
+    fn on_increment(&mut self, side_type: Side, increment: Increment)
+    {
+        for id in increment.deleted
+        {
+            self.remove(&side_type, id);
+        }
+
+        for quote in increment.changed
+        {
+            self.remove(&side_type, quote.id);
+            self.add(&side_type, self.price_step_inv, quote.price, quote.size, quote.id);
+        }
+
+        for quote in increment.added
+        {
+            self.add(&side_type, self.price_step_inv, quote.price, quote.size, quote.id);
+        }
+    }
+
+    fn on_snapshot(&mut self, side_type: Side, snapshot: Vec<L3Quote>)
+    {
+        match side_type
+        {
+            Side::ASK => {
+                self.ask.clear();
+                self.ask_ids.clear()
+            }
+            Side::BID => {
+                self.bid.clear();
+                self.bid_ids.clear()
+            }
+        };
+
+        for quote in snapshot
+        {
+            self.add(&side_type, self.price_step_inv, quote.price, quote.size, quote.id);
+        }
+    }
+
     pub fn update(&mut self, line: &String)
     {
         let result: Result<Tick, serde_json::Error> = serde_json::from_str(line);
         if let Ok(json_line) = result
         {
-            let (side, side_type) =
-                if json_line.side == String::from("BID")
-                {
-                    (&mut self.bid, Side::BID)
-                }
-                else
-                {
-                    (&mut self.ask, Side::ASK)
-                };
+            let side_type = if json_line.side == String::from("BID") { Side::BID } else { Side::ASK };
+
             if self.instrument == json_line.instrument
             {
                 self.date = json_line.date;
 
-                let quotes = match json_line.quotes
+                match json_line.quotes
                 {
-                    QuotesEnum::INCREMENT(quotes) => quotes,
-                    QuotesEnum::SNAPSHOT(v) => {
-                        side.clear();
-
-                        for quote in v
-                        {
-                            self.add(&side_type, self.price_step_inv, quote.price, quote.size, quote.id);
-                        }
-                        return;
-                    }
+                    QuotesEnum::INCREMENT(quotes) => self.on_increment(side_type,quotes),
+                    QuotesEnum::SNAPSHOT(quotes) => self.on_snapshot(side_type, quotes)
                 };
-
-                for id in quotes.deleted
-                {
-                    self.remove(&side_type, id);
-                }
-
-                for quote in quotes.changed
-                {
-                    self.remove(&side_type, quote.id);
-                    self.add(&side_type, self.price_step_inv, quote.price, quote.size, quote.id);
-                }
-
-                for quote in quotes.added
-                {
-                    self.add(&side_type, self.price_step_inv, quote.price, quote.size, quote.id);
-                }
             }
             else
             {
