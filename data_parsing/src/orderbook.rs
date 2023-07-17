@@ -111,7 +111,7 @@ impl OrderBook
         }
         else
         {
-            panic!("No such id in {}!", text);
+            panic!("No such id in {}.\nTried to remove id {}", text, id);
         }
     }
 
@@ -352,6 +352,7 @@ impl OrderBook
         let mut q_dp_bid_file = File::create(format!("{}_QdP_bid.tsv", filename)).unwrap();
         let mut q_dp_ask_file = File::create(format!("{}_QdP_ask.tsv", filename)).unwrap();
 
+        let mut i: i64 = 0;
         for result in lines
         {
             if let Ok(line) = result
@@ -359,15 +360,24 @@ impl OrderBook
                 orderbook.update(&line);
             }
             orderbook.clean();
+            if i % 2 == 1
+            {
+                let l2_bid: Vec<(i64, f64)> = orderbook.to_l2(Side::BID);
+                let l2_ask: Vec<(i64, f64)> = orderbook.to_l2(Side::ASK);
 
-            let l2_bid: Vec<(i64, f64)> = orderbook.to_l2(Side::BID);
-            let l2_ask: Vec<(i64, f64)> = orderbook.to_l2(Side::ASK);
+                let (features_pq, features_q_dp) = OrderBook::calculator(l2_bid);
+                if i % 100 == 99
+                {
+                    OrderBook::writer(features_pq, features_q_dp, &mut pq_bid_file, &mut q_dp_bid_file);
+                }
 
-            let (features_pq, features_q_dp) = OrderBook::calculator(l2_bid);
-            OrderBook::writer(features_pq, features_q_dp, &mut pq_bid_file, &mut q_dp_bid_file);
-
-            let (features_pq, features_q_dp) = OrderBook::calculator(l2_ask);
-            OrderBook::writer(features_pq, features_q_dp, &mut pq_ask_file, &mut q_dp_ask_file);
+                let (features_pq, features_q_dp) = OrderBook::calculator(l2_ask);
+                if i % 100 == 99
+                {
+                    OrderBook::writer(features_pq, features_q_dp, &mut pq_ask_file, &mut q_dp_ask_file);
+                }
+            }
+            i+=1;
         }
     }
 }
