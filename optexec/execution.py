@@ -305,7 +305,6 @@ def update_P(N, N1, M, Mr, P):
     for j in range(cardMr):
         I = (N1[j] == 0)
         for i in range(cardM):
-            I = (N1[j] == 0)
             P[j, i] = (N[j, i] + I) / (N1[j] + cardM * I)
 
 
@@ -386,7 +385,8 @@ class GLOBE:
     def cumulative_impact(self,
                           orderbook_bid: dataloader.OnlineData,
                           orderbook_ask: dataloader.OnlineData,
-                          rounds_for_est: int = 0):
+                          rounds_for_est: int = 0,
+                          model: str = 'basic'):
         ACPR = 0.
         ret = np.empty(shape=self.num_of_rounds + rounds_for_est)
         dt = np.ediff1d(np.linspace(start=0,
@@ -409,7 +409,7 @@ class GLOBE:
         M = np.array(self.M)
         Mr = np.array(self.Mr)
 
-        if model == 'standart':
+        if model == 'basic':
             opt_policy = optimal_policy
         if model == 'plus':
             opt_policy = optimal_policy_plus
@@ -428,8 +428,8 @@ class GLOBE:
 
             sigma = sigma_2_rho(ret[:rounds_for_est + rho]) + 1e-8
             A = compute_Al(self.lamb, self.eta, sigma, self.W[rho], self.L)
-            optimal_policy(A, P, M, self.W_max, pr1, B, sigma, self.W[rho],
-                           Policies)
+            opt_policy(A, P, M, self.W_max, pr1, B, sigma, self.W[rho],
+                       Policies)
 
             for l in range(0, self.L):
                 for _ in range(dt[l]):
