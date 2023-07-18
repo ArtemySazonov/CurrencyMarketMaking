@@ -250,6 +250,45 @@ def optimal_policy(A, P, M, W_max, pr, B, sigma, W, Policies):
                         Policies[l, i, j] = A[l]
 
 
+@njit(parallel=True)
+def optimal_policy_plus(A, P, M, W_max, pr, B, sigma, W, Policies):
+
+    L = A.shape[0]
+    V = np.empty(shape=(W_max + 1, len(M)))
+    a_max = np.max(A)
+    S = np.empty(shape=(len(M), 2 * a_max))
+    CX = np.empty_like(S)
+
+    for j, m in enumerate(M):
+        for i in range(W_max + 1):
+            Policies[L - 1, i, j] = i
+            V[i, j] = Cx(m, i, W, pr, sigma, B)
+
+    for l in range(L - 2, -1, -1):
+        for j in prange(len(M)):
+            CX[j, 0] = 0
+            for a in range(1, 2 * A[l]):
+                CX[j, a] = Cx(M[j], a, W, pr, sigma, B)
+
+            for i in range(W_max + 1):
+                S[j, 0] = CX[j, 0]
+                for m_prime, p in enumerate(P[j]):
+                    S[j, 0] += p * V[i, m_prime]
+                best_S = S[j, 0]
+                Policies[l, i, j] = 0
+
+                for a in range(1, 2 * A[l]):
+                    S[j, a] = CX[j, a]
+                    if i - a > 0:
+                        for m_prime, p in enumerate(P[j]):
+                            S[j, a] += p * V[i - a, m_prime]
+
+                    if S[j, a] < best_S:
+                        Policies[l, i, j] = a
+                        V[i, j] = S[j, a]
+                        best_S = S[j, a]
+
+
 @njit
 def update_N(M, Mr, N, N1, states):
     for j, mr in enumerate(Mr):
@@ -264,6 +303,7 @@ def update_P(N, N1, M, Mr, P):
     cardMr = len(Mr)
 
     for j in range(cardMr):
+        I = (N1[j] == 0)
         for i in range(cardM):
             I = (N1[j] == 0)
             P[j, i] = (N[j, i] + I) / (N1[j] + cardM * I)
@@ -368,6 +408,11 @@ class GLOBE:
 
         M = np.array(self.M)
         Mr = np.array(self.Mr)
+
+        if model == 'standart':
+            opt_policy = optimal_policy
+        if model == 'plus':
+            opt_policy = optimal_policy_plus
 
         for rho in range(self.num_of_rounds):
 
