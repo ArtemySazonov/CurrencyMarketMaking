@@ -1,4 +1,4 @@
-name: Build LaTeX document
+name: Build LaTeX poster
 on:   
   pull_request:
     branches: [ "main" ]
@@ -11,11 +11,11 @@ jobs:
       - name: Compile LaTeX document
         uses: xu-cheng/latex-action@v2
         with:
-          working_directory: report/
-          root_file: document.tex
+          working_directory: Conference 2023 Materials/poster/
+          root_file: poster.tex
           latexmk_shell_escape: true
       - name: Upload PDF file
         uses: actions/upload-artifact@v3
         with:
-          name: Article
-          path: report/document.pdf
+          name: Poster
+          path: Conference 2023 Materials/poster/poster.pdf
