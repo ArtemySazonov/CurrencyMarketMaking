@@ -202,6 +202,7 @@ def plot_ACPR_RI(start,
 
     if savefig:
         plt.savefig(filename)
+        plt.close()
     else:
         plt.show()
 
