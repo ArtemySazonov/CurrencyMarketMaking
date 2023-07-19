@@ -308,7 +308,7 @@ impl OrderBook
             let mut total_volume: f64 = 0.0;
             for (price, volume) in &l2side
             {
-                total_volume += volume * 1e-4;
+                total_volume += volume * 1e-3;
                 features_pq.push((total_volume, *price));
             }
 
