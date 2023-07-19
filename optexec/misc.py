@@ -178,7 +178,7 @@ def plot_ACPR_RI(start,
 
     sns.set_theme(style="darkgrid")
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(32, 9))
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 9))
 
     if title is not None:
         plt.suptitle(title)
@@ -271,6 +271,7 @@ def calc_and_plot_all_ACPR_RI(T: int,
                               baseline: str = 'TWAP',
                               filename: str = 'TWAP_AC_GLOBE.pdf',
                               title: str = None,
+                              savefig: bool = False,
                               **params) -> list:
 
     idx_baseline = strategies.index(baseline)
@@ -284,7 +285,15 @@ def calc_and_plot_all_ACPR_RI(T: int,
         RI.append((acpr_baseline - acpr) / np.abs(acpr_baseline))
 
     legends = strategies
-    plot_ACPR_RI(start, stop, num, ACPR, RI, legends, filename, title)
+    plot_ACPR_RI(start,
+                 stop,
+                 num,
+                 ACPR,
+                 RI,
+                 legends,
+                 filename,
+                 title,
+                 savefig=savefig)
     return ACPR, RI
 
 
@@ -323,145 +332,3 @@ def parser_N(file1,
     f2.close()
     f3.close()
     f4.close()
-
-
-def backtest(file1, file2):
-    T = 50
-    W = np.ones(shape=10, dtype=int) * 500
-
-    W_max = 501  #only for GLOBE
-
-    lamb = 2 * (0.01)
-    eta = 2 * (0.001)
-    init_sigma = 0.021713089727230926
-
-    start = 2
-    stop = T
-    num = 49
-
-    skip = 0
-    rounds_for_est = 15
-
-    K = 100000.
-
-    title = 'ACPR and RI'
-
-    params_GLOBE = {
-        'lamb': lamb,
-        'eta': eta,
-        'init_sigma': init_sigma,
-        'W_max': W_max,
-        'K': K
-    }
-
-    params_GLOBE_plus = {
-        'lamb': lamb,
-        'eta': eta,
-        'init_sigma': init_sigma,
-        'W_max': W_max,
-        'K': K
-    }
-
-    params_AC = {'lamb': lamb, 'eta': eta, 'init_sigma': init_sigma}
-    params_TWAP = {}
-
-    default_params = {
-        'T': T,
-        'W': W,
-        'start': start,
-        'stop': stop,
-        'num': num,
-        'skip': skip,
-        'rounds_for_est': rounds_for_est,
-        'file1': file1,
-        'file2': file2,
-        'filename': 'optexec/TWAP_AC_GLOBE.pdf',
-        'title': title
-    }
-
-    params = {
-        'TWAP': params_TWAP,
-        'AC': params_AC,
-        'GLOBE': params_GLOBE,
-        'GLOBE+': params_GLOBE_plus
-    }
-
-    ACPR, RI = calc_and_plot_all_ACPR_RI(**default_params, **params)
-
-
-def complete_backtest():
-    T = 50
-    W = np.ones(shape=10, dtype=int) * 500
-
-    W_max = 501  #only for GLOBE
-
-    lamb = 2 * (0.01)
-    eta = 2 * (0.001)
-    init_sigma = 0.021713089727230926
-
-    start = 2
-    stop = T
-    num = 49
-
-    skip = 0
-    rounds_for_est = 15
-
-    K = 100000.
-    instrument = ['USD_CNH_T+1', 'USD_RUB_T+1']
-    date = [['2022-10-04', '2022-10-12', '2022-10-21', '2022-10-31'],
-            ['2022-10-24', '2022-10-31', '2022-11-03', '2022-11-10']]
-
-    start_names = []
-    files = []
-
-    for j in range(8):
-        files.append('optexec/' +
-                     (instrument[j // 4] + '__' + date[j // 4][j % 4] +
-                      '_PQ_' + 'ask.tsv', 'optexec/' + instrument[j // 4] +
-                      '__' + date[j // 4][j % 4] + '_PQ_' + 'bid.tsv'))
-        start_names.appned(instrument[j // 4] + ' ' + date[j // 4][j % 4])
-
-    for file1, file2, start_name in zip(files, start_names):
-
-        filename = start_name + ' ' + str(T) + ' ' + str(W[0]) + '.pdf'
-
-        title = None
-
-        params_GLOBE = {
-            'lamb': lamb,
-            'eta': eta,
-            'init_sigma': init_sigma,
-            'W_max': W_max,
-            'K': K
-        }
-        params_GLOBE_plus = {
-            'lamb': lamb,
-            'eta': eta,
-            'init_sigma': init_sigma,
-            'W_max': W_max,
-            'K': K
-        }
-        params_AC = {'lamb': lamb, 'eta': eta, 'init_sigma': init_sigma}
-        params_TWAP = {}
-
-        default_params = {
-            'T': T,
-            'W': W,
-            'start': start,
-            'stop': stop,
-            'num': num,
-            'skip': skip,
-            'rounds_for_est': rounds_for_est,
-            'file1': file1,
-            'file2': file2,
-            'filename': filename,
-            'title': title
-        }
-        params = {
-            'TWAP': params_TWAP,
-            'AC': params_AC,
-            'GLOBE': params_GLOBE,
-            'GLOBE+': params_GLOBE_plus
-        }
-
-        ACPR, RI = calc_and_plot_all_ACPR_RI(**default_params, **params)
