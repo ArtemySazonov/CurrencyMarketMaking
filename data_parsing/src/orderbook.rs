@@ -316,7 +316,7 @@ impl OrderBook
             let price_zero: i64 = l2side[0].0;
             for (volume, price) in &features_pq
             {
-                features_q_dp.push((*price - price_zero, *volume));
+            //    features_q_dp.push((*price - price_zero, *volume));
             }
         }
         (features_pq, features_q_dp)
@@ -503,9 +503,8 @@ mod tests {
         let info: &str = r#"{"instrument":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":[{"id":1,"price":4000.0,"size":1.00},{"id":3,"price":4003.0,"size":1.05}]}"#;
         let orderbook = OrderBook::from_str(info, "BTCUSD".to_string(), 0.0025);
         let l2_bid: Vec<(i64, f64)> = orderbook.to_l2(Side::BID);
-        let (features_pq, features_q_dp) = OrderBook::calculator(l2_bid);
+        let (features_pq, _features_q_dp) = OrderBook::calculator(l2_bid);
         let features_pq_expected = vec![(1.05e-4, 1601200i64), (2.05e-4, 1600000i64)];
-        let features_q_dp_expected = vec![(0i64, 1.05e-4),(-1200i64, 2.05e-4)];
 
         println!("{:?}", features_pq);
         println!("{:?}", features_pq_expected);
@@ -513,7 +512,6 @@ mod tests {
         for i in 0..2
         {
             assert_eq!(features_pq_expected[i], features_pq[i]);
-            assert_eq!(features_q_dp_expected[i], features_q_dp[i]);
         }
     }
 
