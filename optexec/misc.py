@@ -160,7 +160,15 @@ def plot_ACPR(start, stop, num, ACPR, legends, filename):
     plt.show()
 
 
-def plot_ACPR_RI(start, stop, num, ACPR, RI, legends, filename, title=None):
+def plot_ACPR_RI(start,
+                 stop,
+                 num,
+                 ACPR,
+                 RI,
+                 legends,
+                 filename,
+                 title=None,
+                 savefig: bool = False):
 
     ELL = np.linspace(start=start,
                       stop=stop,
@@ -170,10 +178,10 @@ def plot_ACPR_RI(start, stop, num, ACPR, RI, legends, filename, title=None):
 
     sns.set_theme(style="darkgrid")
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 9))
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(32, 9))
 
     if title is not None:
-        plt.suptitle(title, fontsize=19, fontweight='bold')
+        plt.suptitle(title)
 
     for acpr, legend in zip(ACPR, legends):
         ax1.plot(ELL, acpr, '-', label=legend)
@@ -183,8 +191,8 @@ def plot_ACPR_RI(start, stop, num, ACPR, RI, legends, filename, title=None):
     ax1.set_xlabel('$L$', fontsize=12)
     ax2.set_xlabel('$L$', fontsize=12)
 
-    ax1.set_ylabel('$ACPR$', fontsize=12)
-    ax2.set_ylabel('$RI$', fontsize=12)
+    ax1.set_ylabel('$\operatorname{ACPR}$', fontsize=12)
+    ax2.set_ylabel('$\operatorname{RI}$', fontsize=12)
 
     # ax1.set_title(names[0], fontsize=14)
     # ax2.set_title(names[1], fontsize=14)
@@ -192,8 +200,10 @@ def plot_ACPR_RI(start, stop, num, ACPR, RI, legends, filename, title=None):
     ax1.legend()
     ax2.legend()
 
-    plt.savefig(filename)
-    plt.show()
+    if savefig:
+        plt.savefig(filename)
+    else:
+        plt.show()
 
 
 def calc_all(T: int,
