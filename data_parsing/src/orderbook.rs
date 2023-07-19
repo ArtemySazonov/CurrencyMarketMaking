@@ -309,7 +309,7 @@ impl OrderBook
             for (price, volume) in &l2side
             {
                 total_volume += volume * 1e-3;
-                features_pq.push((total_volume, *price));
+                features_pq.push((total_volume.round(), *price));
             }
 
             // Recalculate Q = Q(dP)
