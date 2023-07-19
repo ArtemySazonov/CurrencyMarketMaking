@@ -308,7 +308,7 @@ impl OrderBook
             let mut total_volume: f64 = 0.0;
             for (price, volume) in &l2side
             {
-                total_volume += volume * 1e-6;
+                total_volume += volume * 1e-4;
                 features_pq.push((total_volume, *price));
             }
 
@@ -504,8 +504,8 @@ mod tests {
         let orderbook = OrderBook::from_str(info, "BTCUSD".to_string(), 0.0025);
         let l2_bid: Vec<(i64, f64)> = orderbook.to_l2(Side::BID);
         let (features_pq, features_q_dp) = OrderBook::calculator(l2_bid);
-        let features_pq_expected = vec![(1.05e-6, 1601200i64), (2.05e-6, 1600000i64)];
-        let features_q_dp_expected = vec![(0i64, 1.05e-6),(-1200i64, 2.05e-6)];
+        let features_pq_expected = vec![(1.05e-4, 1601200i64), (2.05e-4, 1600000i64)];
+        let features_q_dp_expected = vec![(0i64, 1.05e-4),(-1200i64, 2.05e-4)];
 
         println!("{:?}", features_pq);
         println!("{:?}", features_pq_expected);
