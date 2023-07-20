@@ -2,6 +2,8 @@ use std::{io::BufReader, path::Path, fs::File, io::BufRead, io::Error, collectio
 use std::io::Write;
 use serde::{Deserialize, Serialize};
 
+#[allow(dead_code)]
+
 const BAD_STRING:          &str = "Bad string found. Check the inputs.";
 const INSTRUMENT_MISMATCH: &str = "Instrument mismatch. Check the inputs.";
 
@@ -119,7 +121,7 @@ impl OrderBook
     {
         self.ask.retain(|_k,v| v.len() != 0);
         self.bid.retain(|_k,v| v.len() != 0);
-        //self.check_bid_ask_overlap();                                                             //Commented out since not needed
+        self.check_bid_ask_overlap();                                                             //Commented out since not needed
     }
 
     fn check_bid_ask_overlap(&self)
@@ -298,10 +300,9 @@ impl OrderBook
         file.write_all("\n".as_bytes()).expect("TODO: panic message");
     }
 
-    fn calculator(l2side: Vec<(i64, f64)>) -> (Vec<(f64, i64)>, Vec<(i64, f64)>)
+    fn calculator(l2side: Vec<(i64, f64)>) -> Vec<(f64, i64)>
     {
         let mut features_pq: Vec<(f64, i64)> = Vec::new();
-        let mut features_q_dp: Vec<(i64, f64)> = Vec::new();
         if !l2side.is_empty()
         {
             // Calculate P = P(Q)
@@ -311,22 +312,8 @@ impl OrderBook
                 total_volume += volume;
                 features_pq.push((total_volume, *price));
             }
-
-            // Recalculate Q = Q(dP)
-            let price_zero: i64 = l2side[0].0;
-            for (volume, price) in &features_pq
-            {
-            //    features_q_dp.push((*price - price_zero, *volume));
-            }
         }
-        (features_pq, features_q_dp)
-    }
-
-    pub fn writer(features_pq: Vec<(f64, i64)>, features_q_dp: Vec<(i64, f64)>, pq_file: &mut File, q_dp_file: &mut File)
-    {
-        // Write to TSV files
-        OrderBook::feature_println(features_pq.iter().map(|x| String::from(format!("{:?}", x))).collect(), pq_file);
-        OrderBook::feature_println(features_q_dp.iter().map(|x| String::from(format!("{:?}", x))).collect(), q_dp_file);
+        features_pq
     }
 
     pub fn calculate_features(filename: &str, instrument: String, price_step: f64)
@@ -334,7 +321,6 @@ impl OrderBook
         /*
             * This function calculates features for the orderbook and outputs them in multiple .npy files.
             * 1. Price by volume P(Q);
-            * 2. Volume by price threshold Q(dP);
          */
         let mut orderbook = OrderBook::new(instrument, price_step);
         let path = Path::new(filename);
@@ -349,8 +335,6 @@ impl OrderBook
 
         let mut pq_bid_file = File::create(format!("{}_PQ_bid.tsv", filename)).unwrap();
         let mut pq_ask_file = File::create(format!("{}_PQ_ask.tsv", filename)).unwrap();
-        let mut q_dp_bid_file = File::create(format!("{}_QdP_bid.tsv", filename)).unwrap();
-        let mut q_dp_ask_file = File::create(format!("{}_QdP_ask.tsv", filename)).unwrap();
 
         let mut i: i64 = 0;
         for result in lines
@@ -358,23 +342,18 @@ impl OrderBook
             if let Ok(line) = result
             {
                 orderbook.update(&line);
+                orderbook.clean();
             }
-            orderbook.clean();
             if i % 2 == 1
             {
                 let l2_bid: Vec<(i64, f64)> = orderbook.to_l2(Side::BID);
                 let l2_ask: Vec<(i64, f64)> = orderbook.to_l2(Side::ASK);
 
-                let (features_pq, features_q_dp) = OrderBook::calculator(l2_bid);
-                if i % 100 == 99
+                let (features_pq_bid, features_pq_ask) = (OrderBook::calculator(l2_bid), OrderBook::calculator(l2_ask));
+                if i % 100 == -1
                 {
-                    OrderBook::writer(features_pq, features_q_dp, &mut pq_bid_file, &mut q_dp_bid_file);
-                }
-
-                let (features_pq, features_q_dp) = OrderBook::calculator(l2_ask);
-                if i % 100 == 99
-                {
-                    OrderBook::writer(features_pq, features_q_dp, &mut pq_ask_file, &mut q_dp_ask_file);
+                    OrderBook::feature_println(features_pq_bid.iter().map(|x| String::from(format!("{:?}", x))).collect(), &mut pq_ask_file);
+                    OrderBook::feature_println(features_pq_ask.iter().map(|x| String::from(format!("{:?}", x))).collect(), &mut pq_bid_file);
                 }
             }
             i+=1;
@@ -503,11 +482,8 @@ mod tests {
         let info: &str = r#"{"instrument":"BTCUSD","type":"SNAPSHOT","date":"2019-01-01T00:00:00.000Z","side":"BID","quotes":[{"id":1,"price":4000.0,"size":1.00},{"id":3,"price":4003.0,"size":1.05}]}"#;
         let orderbook = OrderBook::from_str(info, "BTCUSD".to_string(), 0.0025);
         let l2_bid: Vec<(i64, f64)> = orderbook.to_l2(Side::BID);
-        let (features_pq, _features_q_dp) = OrderBook::calculator(l2_bid);
-        let features_pq_expected = vec![(1.05e-4, 1601200i64), (2.05e-4, 1600000i64)];
-
-        println!("{:?}", features_pq);
-        println!("{:?}", features_pq_expected);
+        let features_pq = OrderBook::calculator(l2_bid);
+        let features_pq_expected = vec![(1.05, 1601200i64), (2.05, 1600000i64)];
 
         for i in 0..2
         {
