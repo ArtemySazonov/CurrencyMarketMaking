@@ -35,11 +35,10 @@ fn main()
                                         "data/USD_RUB_T+1__2022-11-09",
                                         "data/USD_RUB_T+1__2022-11-10",
                                         "data/USD_RUB_T+1__2022-11-11",];
-    //let filenames_chn = ["data/USD_CNH_T+1__2022-10-04", "data/USD_CNH_T+1__2022-10-12", "data/USD_CNH_T+1__2022-10-21", "data/USD_CNH_T+1__2022-10-31"];
+    let filenames_chn = ["data/USD_CNH_T+1__2022-10-04"];//, "data/USD_CNH_T+1__2022-10-12", "data/USD_CNH_T+1__2022-10-21", "data/USD_CNH_T+1__2022-10-31"];
 
-    for filename in tqdm(filenames_rub.iter())
+    for filename in tqdm(filenames_chn.iter())
     {
-        OrderBook::calculate_features(filename, "USD/RUB_T+1".to_string(), 0.0025);
-        println!("Completed {}", filename);
+        OrderBook::calculate_features(filename, "USD/CNH_T+1".to_string(), 0.0025);
     }
 }
