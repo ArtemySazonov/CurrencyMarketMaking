@@ -30,6 +30,7 @@
         The data is read from the raw MOEX files using the \href{github.com/serde-rs/json}{\texttt{serde-rs/json}} library. Then, the obtained data is
         converted into the \mintinline{rust}|OrderBook| structure tick-by-tick using the \mintinline{rust}|OrderBook::update| method.
 
-    \section{Additional backtesting}
+    \section{Additional backtesting}\label{appendix:backtest}
+        Here we used the first set of parameters for the backtest from Section \ref{section:backtest}.
         \subimport{./}{backtest.tex}
 \end{appendices}   % Do not change this line

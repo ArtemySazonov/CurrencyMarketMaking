@@ -1,4 +1,4 @@
-name: Build LaTeX poster
+name: Build LaTeX poster (2023)
 on:   
   pull_request:
     branches: [ "main" ]

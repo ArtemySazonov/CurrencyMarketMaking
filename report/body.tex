@@ -293,7 +293,7 @@
         \begin{enumerate}
             \item USD/RUB; 
             \item EUR/RUB; 
-            \item CHN/RUB;
+            \item USD/CNH;
             \item EUR/USD.
         \end{enumerate} 
         Technical data description and order book implementation details could be found in the Appendix \ref{appendix:data}.
@@ -307,7 +307,7 @@
             \end{itemize}
         \end{itemize}
 
-    \subsection{Backtesting the algorithms}
+    \subsection{Backtesting the algorithms}\label{section:backtest}
         Backtesting steps:
         \begin{enumerate}
             \item We chose some intraday data for all four instruments.
@@ -315,10 +315,36 @@
             \item We calculated the ACPR series in consecutive rounds for the obtained time series of functions.
             \item We calculated the RI metrics and plotted the results.
         \end{enumerate}
+        Note that the backtesting uses the morning data only due to the tendency to higher liquidity at this time of day. 
+        This is vital since the authors of the GLOBE algorithm emphasize that the size of the position to be liquidated should be quite small compared to the depth of the limit order book.
 
+        For now, we shall deeply analyze the USD/CNH\_TOM only (Figures \ref{fig:backtest1} -- \ref{fig:backtest4}). The complete backtest for the USD/RUB\_TOM could be found in Appendix \ref{appendix:backtest}.
+        We used the following parameters of the models:
+            \begin{minted}[gobble=12]{python3}
+                T = 50
+                W = np.ones(shape=10, dtype=int) * 500
+    
+                W_max = 501
+    
+                lamb = 2 * (0.01)
+                eta = 2 * (0.001)
+                init_sigma = 0.021713089727230926
+    
+                start = 2
+                stop = T
+                num = 49
+    
+                skip = 0
+                rounds_for_est = 15
+    
+                K = 100000.0
+            \end{minted}
+
+        We can clearly see that due to the incorrectly calibrated parameters the GLOBE family of algorithms performs very poorly. 
+        It is observable that for all chosen trading days GLOBE+ tends to outperform the standard GLOBE algorithm, but they both perform poorly compared to TWAP and AC algorithms.
         \begin{figure}[htbp]
             \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-10-04 T = 50 W = 500.pdf}
-            \caption{ACPR and RI metrics for USD\_CNH\_T+1 2022-10-04 at 50 with $W = 500$}
+            \caption{ACPR and RI metrics for USD\_CNH\_T+1 2022-10-04 at 50 with $W = 500$}\label{fig:backtest1}
         \end{figure}
         
         \begin{figure}[htbp]
@@ -333,5 +359,5 @@
         
         \begin{figure}[htbp]
             \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-10-31 T = 50 W = 500.pdf}
-            \caption{ACPR and RI metrics for USD\_CNH\_T+1 2022-10-31 at 50 with $W = 500$}
+            \caption{ACPR and RI metrics for USD\_CNH\_T+1 2022-10-31 at 50 with $W = 500$}\label{fig:backtest4}
         \end{figure}

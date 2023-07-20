@@ -1,15 +1,15 @@
 \conclusion % Do not change this line
     During the semester we studied three trade execution algorithms:
     \begin{enumerate}
-        \item Time-Weighted Average Price (stochastic modification);
+        \item Time-Weighted Average Price;
         \item Almgren-Chriss model with linear impact functions;
         \item Greedy exploration in Limit Order Book Execution.
     \end{enumerate}
     We found out that TWAP is the most versatile of them all, but is not being the optimal one (given the parameters for the AC and GLOBE algorithms are estimated correctly). 
     The AC model has the closed-form solution for the strategy only in case of the 
     linear price impact functions, and it's optimal strategy is deterministic.
-    The underlying assumptions of the GLOBE algorithm do not allow us to use it for the high-frequency trading, and in 
-    addition to that, the authors of this model stronly rely on the AC assumptions, which are not too realistic. 
+    The GLOBE algorithms rely on the correctness of the chosen parameters, which cannot be easily estimated or guessed.
+    In this case it gives less costs on average to execute the trade uniformly.
 
     The further research of this topic could go to various directions:
     \begin{itemize}
