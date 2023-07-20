@@ -93,7 +93,8 @@
 
 \section{Optimal Execution Algorithms}\label{section:OptExecAlgos}
     \subsection{Preliminary Information}
-        First of all, we can neglect the time value of money since we are working in the high-frequency
+        First of all, we shall mention that one can neglect the concept of the temporal value of money since almost all models 
+        are requiring a small trader working in the high-frequency
         trading world, i.e. the money do not lose any value in our scale. Therefore, $\gamma \equiv 1$.
 
         Our trading bot has the following set of actions:
@@ -188,8 +189,8 @@
                             M_l^\rho = \frac{p_b(\rho, l) - p_b(\rho, 1)}{\sigma_\rho},
                         \end{equation}
                         where $\sigma_\rho$ is the bid price volatility. 
-                        The reasoning behind this formula is that we can use the knowledge from the past to predict the bid price movement even when the LH interval is different during the current round.
-                        Similarly, we introduce the $p_a(\rho, l)$ (ask price) and $p_m(\rho, l)$ (mid price).
+                        The reasoning behind this formula is that we can use the knowledge from the past to predict the bid price movement even when the LH interval 
+                        is different during the current round. Similarly, we introduce the $p_a(\rho, l)$ (ask price) and $p_m(\rho, l)$ (mid price).
                         The returns of the asset are defined as follows:
                         \begin{equation*}
                             \operatorname*{Ret} (\rho) = \log \frac{p_m(\rho, l)}{p_m(\rho, 1)} .
@@ -243,15 +244,22 @@
             The changes we proposed:
             \begin{enumerate}
                 \item The authors of the article did not provide a clear way to estimate the set of reachable states $\mathcal{M}^r$. Therefore, we changed it to $\mathcal{M}$. The complexity of the algorithm slightly increased.
-                \item The \texttt{init\_sigma} is not correctly defined: division by zero. We estimate the initial volatility by the historical data. Nothing changed since the second round will overwrite the initial guess.
-                \item 
+                \item The mid price volatility estimator is not correctly initialized: division by zero. We estimate the initial volatility \texttt{init\_sigma} using the historical data and hardcode it. Nothing changed since the second round will overwrite the initial guess.
+                \item The Bellman equation is solved for all $m \in \mathcal M$, not for all $m \in \mathcal M^r$, because the next step uses the solution like it was solved for $m \in \mathcal M$ (probably, a typo in their text).
+                \item It is worth noticing a few mistakes made by \citeauthor{Akbarzadeh2018}:
+                \begin{itemize}
+                    \item The complexity of the algorithm does not include a dependency on $W_{\text{max}}$, but one should solve the Bellman equation for all $I\in \{0, \dots, W_{\text{max}}\}$.
+                    \item They did not specify the correct behaviour of the policy $\pi_l(M_l, I_l, X)$ and the V-value of the policy $V^*_l(M', I - a, X)$ (expected cost) when $I-a < 0$. We assumed here $\max(I-a, 0)$ due to the fact that we simply cannot sell more than our current inventory contains.
+                    \item Moreover, we shall never enter the outer loop since the initialized value of $\rho$ is $1$, and the loop condition is $\rho > 1$. We changed this to $\rho < \operatorname{num\_of\_rounds} + \operatorname{rounds\_for\_est}$ (rounds for est correspond to the initial value of volatility)
+                \end{itemize}
             \end{enumerate}
+
             \begin{algorithm}
                 \caption[Modified GLOBE Algorithm]{Modified Greedy exploitation in Limit Order Book Execution (M-GLOBE)}
                 \begin{algorithmic}
                     \State Input: $L, \mathcal{M}$
-                    \State Initialize: $\rho = 1, N(M)=0, N(M,M)=0, \forall M, M' \in \mathcal{M}$
-                    \While {$\rho > 1$}
+                    \State Initialize: $\rho = 1, N(M)=0, N(M,M)=0, \forall M, M' \in \mathcal{M}$, $\sigma = \operatorname{init\_sigma}$
+                    \While {$\rho < \operatorname{num\_of\_rounds} + \operatorname{rounds\_for\_est}$}
                         \State $\hat P_\rho (M, M') := \frac{N(M, M') + \1(N(M) = 0)}{N(M) + |\mathcal M| \1 (N(M) = 0)}$
                         \State Update $\sigma_\rho$ in the AC model based on the past observations
                         \State Observe $X_\rho = (W_\rho, p_r(\rho), \sigma_\rho, B_1^\rho)$
@@ -271,6 +279,7 @@
                 \label{algorithm:MGLOBE}
             \end{algorithm}
 
+
     \subsection{Metrics for the backtest}
         \begin{definition}[Average Cost Per Round]
             \begin{align}
@@ -283,7 +292,12 @@
             \begin{equation}
                 \operatorname*{RI} = \frac{\operatorname*{ACPR}_{\text{TWAP}} - \operatorname*{ACPR}_{\text{Algorithm}}}{\operatorname*{ACPR}_{\text{TWAP}}}.
             \end{equation}
+            Obviously, 
+            \begin{equation*}
+                \operatorname*{RI} \to \max \iff \operatorname*{ACPR} \to \min.
+            \end{equation*}
         \end{definition}
+
 
 \section{Practical Problems and Backtesting}\label{section:Backtest}
     \subsection{Data collection and features calculation}
@@ -311,53 +325,58 @@
         Backtesting steps:
         \begin{enumerate}
             \item We chose some intraday data for all four instruments.
-            \item We chose every 100th tick of the book for the L3 intraday data (we did not assume the overnights or execution longer than the rest of the trading day) assuming that the liquidity comes back to its' historical level after 100 ticks.
+            \item We chose every 100th tick of the book for the L3 intraday data (we did not assume the overnights or execution
+                  longer than the rest of the trading day) assuming that the liquidity comes back to its' historical level after 100 ticks.
             \item We calculated the ACPR series in consecutive rounds for the obtained time series of functions.
             \item We calculated the RI metrics and plotted the results.
         \end{enumerate}
         Note that the backtesting uses the morning data only due to the tendency to higher liquidity at this time of day. 
-        This is vital since the authors of the GLOBE algorithm emphasize that the size of the position to be liquidated should be quite small compared to the depth of the limit order book.
+        This is vital since the authors of the GLOBE algorithm emphasize that the size of the position to be liquidated should be quite small 
+        compared to the depth of the limit order book.
 
-        For now, we shall deeply analyze the USD/CNH\_TOM only (Figures \ref{fig:backtest1} -- \ref{fig:backtest4}). The complete backtest for the USD/RUB\_TOM could be found in Appendix \ref{appendix:backtest}.
-        We used the following parameters of the models:
-            \begin{minted}[gobble=12]{python3}
-                T = 50
-                W = np.ones(shape=10, dtype=int) * 500
-    
-                W_max = 501
-    
-                lamb = 2 * (0.01)
-                eta = 2 * (0.001)
-                init_sigma = 0.021713089727230926
-    
-                start = 2
-                stop = T
-                num = 49
-    
-                skip = 0
-                rounds_for_est = 15
-    
-                K = 100000.0
-            \end{minted}
-
-        We can clearly see that due to the incorrectly calibrated parameters the GLOBE family of algorithms performs very poorly. 
-        It is observable that for all chosen trading days GLOBE+ tends to outperform the standard GLOBE algorithm, but they both perform poorly compared to TWAP and AC algorithms.
         \begin{figure}[htbp]
             \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-10-04 T = 50 W = 500.pdf}
-            \caption{ACPR and RI metrics for USD\_CNH\_T+1 2022-10-04 at 50 with $W = 500$}\label{fig:backtest1}
+            \caption{ACPR and RI metrics for USD\_CNH\_T+1 on 2022-10-04 with $T = 50$ and $W = 500$}\label{fig:backtest1}
+        \end{figure}
+
+        For now, we shall deeply analyze the USD/CNH\_TOM only (Figures \ref{fig:backtest1} -- \ref{fig:backtest4}). The complete backtest 
+        for the USD/RUB\_TOM (with the parameters below) could be found in Appendix \ref{appendix:backtest}.
+        We used the following parameters of the models:
+        \begin{minted}[gobble=8]{python3}
+            T = 50
+            W = np.ones(shape=10, dtype=int) * 500
+            W_max = 501
+
+            lamb = 2 * (0.01)
+            eta = 2 * (0.001)
+            init_sigma = 0.021713089727230926
+
+            start = 2
+            stop = T
+            num = 49
+
+            skip = 0
+            rounds_for_est = 15
+
+            K = 100000.0
+        \end{minted}
+        The parameters above were manually chosen such that the 2022-10-04 trading day (Figure \ref{fig:backtest1}) had the best performance 
+        for the GLOBE algorithms while selling the dollar/yuan currency pair.
+        
+        \begin{figure}[htbp]
+            \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-10-20 T = 50 W = 500.pdf}
+            \caption{ACPR and RI metrics for USD\_CNH\_T+1 on 2022-10-20 with $T = 50$ and $W = 500$}\label{fig:backtest2}
         \end{figure}
         
         \begin{figure}[htbp]
-            \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-10-12 T = 50 W = 500.pdf}
-            \caption{ACPR and RI metrics for USD\_CNH\_T+1 2022-10-12 at 50 with $W = 500$}
+            \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-11-01 T = 50 W = 500.pdf}
+            \caption{ACPR and RI metrics for USD\_CNH\_T+1 on 2022-11-01 with $T = 50$ and $W = 500$}\label{fig:backtest3}
         \end{figure}
         
         \begin{figure}[htbp]
-            \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-10-21 T = 50 W = 500.pdf}
-            \caption{ACPR and RI metrics for USD\_CNH\_T+1 2022-10-21 at 50 with $W = 500$}
+            \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-11-15 T = 50 W = 500.pdf}
+            \caption{ACPR and RI metrics for USD\_CNH\_T+1 on 2022-11-15 with $T = 50$ and $W = 500$}\label{fig:backtest4}
         \end{figure}
-        
-        \begin{figure}[htbp]
-            \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-10-31 T = 50 W = 500.pdf}
-            \caption{ACPR and RI metrics for USD\_CNH\_T+1 2022-10-31 at 50 with $W = 500$}\label{fig:backtest4}
-        \end{figure}
+
+        It is observable that for all chosen trading days GLOBE \& GLOBE+ tend to outperform the AC algorithm.
+        However, it is obvious that the performance of the three algorithms strongly depend on the chosen parameters.

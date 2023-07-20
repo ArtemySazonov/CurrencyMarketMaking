@@ -9,13 +9,14 @@
     The AC model has the closed-form solution for the strategy only in case of the 
     linear price impact functions, and it's optimal strategy is deterministic.
     The GLOBE algorithms rely on the correctness of the chosen parameters, which cannot be easily estimated or guessed.
-    In this case it gives less costs on average to execute the trade uniformly.
-
-    The further research of this topic could go to various directions:
-    \begin{itemize}
-        \item Continuation of the search for the universal deterministic suboptimal strategies;
-        \item Further research of the RL/Deep RL approaches;
-        \item The combination of the deterministic and stochastic methods.
-    \end{itemize}
+    In this case it gives less costs on average to execute the trade uniformly in time.
+    The number of things we could improve during the next semester:
+    \begin{enumerate}
+        \item Implement the calibration of AC and GLOBE parameters;
+        \item Implement some other RL algorithms (Q-learning etc.) to compare them with;
+        \item Invent (or at least try to) our own algorithms;
+        \item Implement the MOEX simulator for a proper backtest (either TCP or multithreading);
+        \item Deploy some of the most successful algorithms to the real market.
+    \end{enumerate}
 
     We intend to continue our research in this field, and we hope that our work will be useful for the further studies.
