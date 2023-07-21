@@ -1,11 +1,39 @@
-\section{Online machine learning and reinforcement learning}
-    Online machine learning, also known as incremental or sequential learning, is a type of machine learning where models are learned and improved over time as new data becomes available. Rather than training a model on a fixed dataset all at once, online machine learning allows the model to adapt and evolve in response to changing conditions.
+\section{Online machine learning and reinforcement learning}\label{section:OMLandRL}
+    In recent years, online machine learning and reinforcement learning have gained significant attention in the field of optimal trade execution. These approaches leverage the power of algorithms and data to continuously learn and adapt execution strategies in real-time, with the goal of achieving optimal trade outcomes.
 
-    One of the main benefits of online machine learning is that it can reduce the amount of time and computational resources required for training and updating a model. Rather than starting from scratch each time new data is added, the model can build on previous knowledge, leading to more efficient learning.
+    Online machine learning, also known as incremental or streaming machine learning, allows for the learning process to occur as new data becomes available. Unlike batch learning, where the algorithm is trained on a fixed dataset, online learning algorithms update their models iteratively, dynamically incorporating new observations into the learning process. This flexibility makes online machine learning well-suited for trade execution, where market conditions change rapidly and the ability to adapt quickly is crucial.
+
+    Reinforcement learning, a subset of online machine learning, is particularly relevant in the context of optimal trade execution. Reinforcement learning algorithms learn through trial and error interactions with an environment, aiming to maximize a reward signal. In the case of trade execution, the algorithm interacts with the market and aims to optimize execution performance by maximizing rewards such as profitability, minimizing transaction costs, or reducing market impact.
+
+    One key advantage of reinforcement learning is its ability to handle complex, dynamic environments without relying on pre-defined rules or models. Reinforcement learning agents learn from experience, exploring different execution strategies and adjusting their actions based on the feedback received. This adaptability allows them to capture non-linear relationships and exploit patterns in the market, potentially leading to improved execution performance.
+
+    However, applying online machine learning and reinforcement learning to trade execution also poses challenges. One of the primary challenges is data quality and availability. To train and fine-tune algorithms effectively, high-quality data that accurately represents market conditions is essential. Additionally, the presence of noisy or incomplete data can impact the learning process and the reliability of the execution strategies.
+
+    Furthermore, the selection of appropriate features and state representation is critical in capturing the relevant information for trade execution. Different market factors, such as liquidity, volatility, and order book dynamics, should be carefully considered to construct informative features that drive the learning process.
+
+    Another challenge is the delicate balance between exploration (trying out new actions to gather data and learn) and exploitation (leveraging learned knowledge for optimal decision-making). In trade execution, this balance becomes crucial, as excessive exploration may result in increased risk or missed trading opportunities, while excessive exploitation may hinder the agent from adapting to changing market conditions.
+
+    Moreover, the deployment of online machine learning or reinforcement learning algorithms in real-time trading environments introduces additional concerns. The algorithms must be able to handle high-frequency data, process information quickly, and make decisions within tight time constraints. Furthermore, risk management and constraints, such as obtaining desired trade volumes within specified time horizons or complying with regulatory requirements, need to be incorporated into the algorithm design.
+
+    Despite these challenges, the application of online machine learning and reinforcement learning to optimal trade execution holds promise. The ability to learn and adapt in real-time, exploit market patterns, and optimize trade outcomes makes these approaches appealing for market participants aiming to enhance their execution strategies. As research and technology continue to advance, the integration of online machine learning and reinforcement learning techniques into trade execution algorithms is expected to be an active area of exploration and development.
+
+    In the realm of online machine learning and reinforcement learning, another powerful tool used for optimizing trade execution is Markov Decision Processes (MDPs). MDPs provide a mathematical framework for modeling decision-making processes in stochastic environments, where the outcomes of actions are uncertain. 
+    Formally, an MDP is defined by a tuple $(\mathcal S, \mathcal A, P, R)$, where:
+    \begin{itemize}
+        \item $\mathcal S$ represents the set of states in the environment;
+        \item $\mathcal A$ represents the set of actions that can be taken;
+        \item $P$ is the transition function, which defines the probability distribution of transitioning from one state to another after taking a specific action;
+        \item $R$ is the reward function, which quantifies the desirability or utility of being in a particular state or taking a specific action.
+    \end{itemize}
+
+    The goal in an MDP is to find a policy that maximizes the expected cumulative reward over time. A policy, denoted by $\pi$ or $\nu$, is a (possibly, stochastic) mapping from states to actions, indicating the action to be taken in each state. 
+
+    In the context of optimal trade execution, Markov Decision Processes provide a framework for modeling the dynamic nature of financial markets, considering the uncertainties involved in price fluctuations and trade executions. By formulating the trade execution problem as an MDP, reinforcement learning algorithms can be applied to learn optimal trading strategies that maximize expected profits while minimizing transaction costs.
 
 
-\section{Electronic market making}
-    We need to define the market making problem in the market. As it was stated in \cite{Cartea2015} and \cite{Bouchaud2018},
+\section{Electronic market making}\label{section:ElectronicMM}
+    We need to understand the core of the optimal execution problem in the market. 
+    As it was stated in \cite{Cartea2015} and \cite{Bouchaud2018},
     the objective of the electronic market is to match the buy and sell orders 
     of the market participants. In practice we can divide all orders to 
     the two groups: \emph{market orders} (MO) and \emph{limit orders} (LO). 
@@ -17,7 +45,7 @@
     \end{definition}
     
     The limit orders are \emph{passive}, i.e. they are not executed immediately, since 
-    we need to find a counterparty for them. The market orders are \emph{aggressive},
+    we need to find a counterparty for them\footnote{The limit order can be executed immediately if it's limit price is higher than the best counterorder}. The market orders are \emph{aggressive},
     i.e. they are executed immediately, since they are the ones being dynamically matched with the limit orders. 
     The market orders for $N$ shares collects the best $N$ shares limit orders from the order book.
     The order book stores only the information about the limit orders, so we can call it the limit order book (LOB).
@@ -27,7 +55,7 @@
 
     This effect is called a \emph{price impact} and it is the main reason why we should need to 
     optimize the trade execution. The price impact could be represented as a function of the order size and the time.
-    If we execute the MO rapidly, then we will pay a lot of money for the price impact. We should 
+    If we execute the trade quickly, then we will pay a lot of money for the price impact. We should 
     note that the price impact has the inverse relation with the liquidity of the asset. The more liquid the asset is, the less price impact is.
     If we execute only the best priced limit orders in order to avoid the price impact of the certain assets, then we are 
     doomed to be executing the MO for quite a long time, what significantly increases the \emph{market risk}. The market 
@@ -37,16 +65,17 @@
     Now we are ready to formulate the \emph{optimal execution problem}: liquidate the position by minimizing the functional of the price impact and the market risk. 
     Let us write this problem in terms of stochastic optimal control.
 
-    Let us have $W$ lots of an asset in the long position that we need to sell during time $T$ from now.
-    Let us have $L$ stock exchange ticks and we define the \emph{liquidation times} $t_k = k\tau$, $\tau = T/L$.
+    Let us have $W$ lots of an asset in the long position that we need to sell during time $T$ (measured in ticks) from now.
+    There are $L$ liquidation intervals and we define the \emph{liquidation times} $t_k = k\tau$, $\tau = T/L$.
     \begin{definition}\label{definition:tradingtrajectory}
         The \emph{trading trajectory} is a process $(w_k)_{k = 0, \dots, L}$, where $w_k$ is a number of lots we 
         still posess at time $t_k$. Alternatively, we can define the \emph{trade list} $n_k = \Delta w_k$, $k = 1, \dots, L$ as a 
         number of lots we sell at time $t_k$.
         The \emph{trading strategy} is a rule for determining $n_k$ given the information avaliable at time $t_k$. Mathematically speaking,
         \begin{equation*}
-            \hat n_k = \mathbb{E}^\nu\left[n_k\vert \mathcal{F}_{t_{k-1}}\right]. 
+            \hat n_k = \mathbb{E}^\nu\left[n_k\vert \mathcal{F}_{t_{k-1}}\right],
         \end{equation*} 
+        where $\nu$ is the probability measure which corresponds to the trading strategy.
     \end{definition}
     We can divide the strategies to \emph{static} (deterministic, all the parameters are known upon the start of the execution) and \emph{dynamic} (stochastic).
     Static strategies do not require any learning, but for the dynamic strategies it is often useful to use online machine learning (RL in particular).
@@ -58,17 +87,18 @@
             \item Liquidity traders are those, who are forced (by their strategy) to exploit the market orthogonally to major events;
         \end{itemize}
         \item \emph{Informed traders}: those traders, who profit from some insider knowledge, a.k.a. information, which is not reflected in the prices;
-        \item \emph{Market makers}: professional traders, who have a market power;
+        \item \emph{Market makers}: professional traders, owners of the market power;
         \item Sometimes, the \emph{arbitrageurs} are differentiated as a fourth group. However, they might be considered to be a subclass of the informed traders.
     \end{enumerate}
 
-\section{Optimal Execution Algorithms}
+\section{Optimal Execution Algorithms}\label{section:OptExecAlgos}
     \subsection{Preliminary Information}
-        First of all, we can neglect the time value of money since we are working in the high-frequency
+        First of all, we shall mention that one can neglect the concept of the temporal value of money since almost all models 
+        are requiring a small trader working in the high-frequency
         trading world, i.e. the money do not lose any value in our scale. Therefore, $\gamma \equiv 1$.
 
         Our trading bot has the following set of actions:
-        \begin{itemize}
+        \begin{itemize}\label{page:actions}
             \item Hold;
             \item Sell 1 lot of the asset;
             \item Sell 2 lots of the asset;
@@ -82,13 +112,6 @@
         It is obvious that the target functional without the risk correction has its $\epsilon$-optimal 
         solution with the uniform distribution of the trades over the given liquidation horizon.
 
-        \begin{definition}[Average Cost Per Round]
-            \begin{align}
-                & \operatorname*{ACPR} = \frac{1}{\operatorname{num\_of\_rounds}} \sum_\rho IS_\rho,\\
-                & IS_\rho = \left( W  p_m(\rho, 1) - \sum_l \frac{A^\rho_l p_b(\rho, l)}{W p_m(\rho, 1)}\right).
-            \end{align}
-        \end{definition}
-
     \subsection{Time-Weighted Average Price Algorithm}
         We shall use the \emph{Time-Weighted Average Price algorithm} (TWAP) execution algorithm as a baseline model.
         According to \cite{TWAP}, 
@@ -96,15 +119,12 @@
             TWAP trading algorithms seek to optimize a trade's average price while executing over a specified time period. This is 
             generally used to execute large orders that are expected to have significant market impact.
         \end{quote}
-        We use a stochastic modification of the classical TWAP algorithm (S-TWAP, see Algorithm \ref{algorithm:stwap})
+        We use a modification of the classical TWAP algorithm (see Algorithm \ref{algorithm:stwap})
         \begin{algorithm}
-            \caption{S-TWAP Algorithm}
+            \caption{M-TWAP Algorithm}
             \begin{algorithmic}
-                \State Initialize the trading list \mintinline{python}|n = [1, ..., 1] * int(W/L)| of length \mintinline{python}|T|
-                \State Uniformly sample a list \mintinline{python}|idx| of \mintinline{python}|W - L * int(W/L)| numbers from \mintinline{python}|[1, ..., T]|
-                \For{i in \mintinline{python}|idx|}
-                    \State \mintinline{python}|n[i]++|
-                \EndFor
+                \State Initialize the trading list \mintinline{python}|n = [1, ..., 1] * int(W/L)| of length \mintinline{python}|L|
+                \State Add \mintinline{python}|W - int(W/L)*L| lots to the last element of the trading list.
             \end{algorithmic}
             \label{algorithm:stwap}
         \end{algorithm}
@@ -129,7 +149,7 @@
         where $u$ is the utility function of the trader. If our initial portfolio is fully owned, then as we transfer our assets from the 
         risky stock into the alternative investment, total wealth remains roughly constant, and we may take $\lambda$ to be constant throughout our trading period.
         
-        Let $w_l$ and $A_l$ be the number of units planned to be hold and sold at the time slot $l\in\mathcal L$.
+        Let $w_l$ and $A_l$ be the number of units planned to be held and sold at the time slot $l\in\mathcal L$.
         We denote $g(A_l)$ and $h(A_l)$ the permanent and temporary price impact functions.
         The AC model assumes that the stock price follows an arithmetic random walk with independent increments.
         The cost of trading is called an \emph{implementation shortfall}:
@@ -141,7 +161,6 @@
             \mathbb{E}\left[\operatorname{IS}\right] + \lambda \var \operatorname{IS} \to \min.
         \end{equation}
         If $\lambda > 0$, then the strategy becomes risk-averse: we try to select actions which do not dramatically change the variance.
-
         The optimal policy for the case of the linear impact functions: $g(A_l) = \gamma A_l$ and $h(A_l) = \eta A_l$:
         \begin{equation*}
             A_l^* = \frac{2\sinh \frac{\kappa}{2}}{\sinh \kappa L}\cosh\left(\kappa (L-l+0.5)\right) W,
@@ -153,8 +172,8 @@
 
     \subsection{Greedy exploitation in Limit Order Book Execution Algorithm}
         The \emph{Greedy exploitation in Limit Order Book Execution algorithm} (GLOBE) was introduced in \cite{Akbarzadeh2018}.
-        It is based on the a model-based reinforcement learning approach using the Markov decision processes (MDP) framework with bounded regret. We found some crucial mistakes in the original 
-        article, so we modified the algorithm in order to make it suitable for taking the profit in the real market.
+        It is based on the a model-based reinforcement learning approach using the Markov decision processes (MDP) framework with bounded regret. We found some inaccuracies in the original 
+        article, so we modified the algorithm in order to make it suitable for using it in the real market.
 
         \subsubsection{Original algorithm}
             For now, let us describe the setup from the original article:
@@ -170,8 +189,8 @@
                             M_l^\rho = \frac{p_b(\rho, l) - p_b(\rho, 1)}{\sigma_\rho},
                         \end{equation}
                         where $\sigma_\rho$ is the bid price volatility. 
-                        The reasoning behind this formula is that we can use the knowledge from the past to predict the bid price movement even when the LH interval is different during the current round.
-                        Similarly, we introduce the $p_a(\rho, l)$ (ask price) and $p_m(\rho, l)$ (mid price).
+                        The reasoning behind this formula is that we can use the knowledge from the past to predict the bid price movement even when the LH interval 
+                        is different during the current round. Similarly, we introduce the $p_a(\rho, l)$ (ask price) and $p_m(\rho, l)$ (mid price).
                         The returns of the asset are defined as follows:
                         \begin{equation*}
                             \operatorname*{Ret} (\rho) = \log \frac{p_m(\rho, l)}{p_m(\rho, 1)} .
@@ -185,7 +204,8 @@
                             \mu_\rho = \frac{1}{\rho-1}\sum_{j=1}^{\rho-1}\operatorname*{Ret}(j).
                         \end{equation*}
                     \item We define the joint state in time slot $l$ of round $\rho$ as $S_l^\rho = (I_l^\rho, M_l^\rho)$.
-                    \item The action set is based on the AC algorithm. In our case, this model defines 
+                    \item The action set is defined as $\mathcal A = \{0, \dots, W_{\text{max}}\}$, where $a_l^\rho \in \mathcal A$ is the action taken in time slot $l$ of round $\rho$. For more details, check page \pageref{page:actions}. In each round, a sequence of actions is selected with the aim
+                    of maximizing the revenue.
                 \end{itemize}
             \end{enumerate}
 
@@ -194,7 +214,7 @@
                 \begin{algorithmic}
                     \State Input: $L, \mathcal{M}, \mathcal{M}^r$
                     \State Initialize: $\rho = 1, N(M)=0, N(M,M)=0, \forall M \in \mathcal{M}^r , \forall M' \in \mathcal{M}$
-                    \While {$\rho < 1$}
+                    \While {$\rho > 1$}
                         \State $\hat P_\rho (M, M') := \frac{N(M, M') + \1(N(M) = 0)}{N(M) + |\mathcal M| \1 (N(M) = 0)}$
                         \State Update $\sigma_\rho$ in the AC model based on the past observations
                         \State Observe $X_\rho = (W_\rho, p_r(\rho), \sigma_\rho, B_1^\rho)$
@@ -221,17 +241,31 @@
             \end{align}
 
         \subsubsection{Our algorithm}
+            The changes we proposed:
+            \begin{enumerate}
+                \item The authors of the article did not provide a clear way to estimate the set of reachable states $\mathcal{M}^r$. Therefore, we changed it to $\mathcal{M}$. The complexity of the algorithm slightly increased.
+                \item The mid price volatility estimator is not correctly initialized: division by zero. We estimate the initial volatility \texttt{init\_sigma} using the historical data and hardcode it. Nothing changed since the second round will overwrite the initial guess.
+                \item The Bellman equation is solved for all $m \in \mathcal M$, not for all $m \in \mathcal M^r$, because the next step uses the solution like it was solved for $m \in \mathcal M$ (probably, a typo in their text).
+                \item It is worth noticing a few mistakes made by \citeauthor{Akbarzadeh2018}:
+                \begin{itemize}
+                    \item The complexity of the algorithm does not include a dependency on $W_{\text{max}}$, but one should solve the Bellman equation for all $I\in \{0, \dots, W_{\text{max}}\}$.
+                    \item They did not specify the correct behaviour of the policy $\pi_l(M_l, I_l, X)$ and the V-value of the policy $V^*_l(M', I - a, X)$ (expected cost) when $I-a < 0$. We assumed here $\max(I-a, 0)$ due to the fact that we simply cannot sell more than our current inventory contains.
+                    \item Moreover, we shall never enter the outer loop since the initialized value of $\rho$ is $1$, and the loop condition is $\rho > 1$. We changed this to $\rho < \operatorname{num\_of\_rounds}$ and we included extra $\operatorname{rounds\_for\_est}$ rounds to estimate the market state set and microstructural realized volatility. 
+                \end{itemize}
+            \end{enumerate}
+
             \begin{algorithm}
                 \caption[Modified GLOBE Algorithm]{Modified Greedy exploitation in Limit Order Book Execution (M-GLOBE)}
                 \begin{algorithmic}
-                    \State Input: $L, \mathcal{M}, \mathcal{M}^r$
-                    \State Initialize: $\rho = 1, N(M)=0, N(M,M)=0, \forall M \in \mathcal{M}^r , \forall M' \in \mathcal{M}$
-                    \While {$\rho < 1$}
+                    \State Input: $L, \operatorname{rounds\_for\_est}$
+                    \State Estimate $\mathcal{M}$ and $\operatorname{init\_sigma}$ using $\operatorname{rounds\_for\_est}$ rounds
+                    \State Initialize: $\rho = 1, N(M)=0, N(M,M)=0, \forall M, M' \in \mathcal{M}$, $\sigma = \operatorname{init\_sigma}$
+                    \While {$\rho < \operatorname{num\_of\_rounds}$}
                         \State $\hat P_\rho (M, M') := \frac{N(M, M') + \1(N(M) = 0)}{N(M) + |\mathcal M| \1 (N(M) = 0)}$
                         \State Update $\sigma_\rho$ in the AC model based on the past observations
                         \State Observe $X_\rho = (W_\rho, p_r(\rho), \sigma_\rho, B_1^\rho)$
                         \State Compute $A_l$ based on the AC model $\forall l \in \mathcal{L}$
-                        \State Compute the estimated optimal policy by dynamic programming using the action set $\mathcal A_l^*$, $\forall l \in \mathcal{L} - \{L\}$ and $\hat P_\rho (M, M')\ \forall M \in \mathcal{M}^r, \forall M' \in \mathcal M$ according to \eqref{globe:rule3}
+                        \State Compute the estimated optimal policy by dynamic programming using the action set $\mathcal A_l^*$, $\forall l \in \mathcal{L} - \{L\}$ and $\hat P_\rho (M, M')\ \forall M, M' \in \mathcal M$ according to \eqref{globe:rule3}
                         \State $I_1^\rho = W_\rho$, $l=1$
                         \For {$l = 1$; $l < L$; $l\ +\!\!=1$}
                             \State Observe $M_l^\rho$, sell $a_l^\rho\in \mathcal{A}^*_l$ using the estimated policy
@@ -240,54 +274,44 @@
                         \EndFor
                         \State $a_{L}^\rho := I_L^\rho$
                         \State $\rho\ +\!\!= 1$
-                        \State Update $N(M, M')$ and $N(M)$ $\forall M \in \mathcal{M}^r$ according to \eqref{globe:rule1} and \eqref{globe:rule2}
+                        \State Update $N(M, M')$ and $N(M)$ $\forall M \in \mathcal{M}$ according to \eqref{globe:rule1} and \eqref{globe:rule2}
                     \EndWhile
                 \end{algorithmic}
                 \label{algorithm:MGLOBE}
             \end{algorithm}
 
 
-\section{Practical Problems and Backtesting}
-    \subsection{Data collection}
-        We obtained the L3 quote data for the four currency pairs from the MOEX:
+    \subsection{Metrics for the backtest}
+        \begin{definition}[Average Cost Per Round]
+            \begin{align}
+                & \operatorname*{ACPR} = \frac{1}{\operatorname{num\_of\_rounds}} \sum_\rho IS_\rho,\\
+                & IS_\rho = \left( W  p_m(\rho, 1) - \sum_l \frac{A^\rho_l p_b(\rho, l)}{W p_m(\rho, 1)}\right).\nonumber
+            \end{align}
+        \end{definition}
+        \begin{definition}[Relative Improvement per round]
+            $\operatorname*{RI}$ shows the relative decrease in the trading costs compared to the baseline model (TWAP, in our case):
+            \begin{equation}
+                \operatorname*{RI} = \frac{\operatorname*{ACPR}_{\text{TWAP}} - \operatorname*{ACPR}_{\text{Algorithm}}}{\operatorname*{ACPR}_{\text{TWAP}}}.
+            \end{equation}
+            Obviously, 
+            \begin{equation*}
+                \operatorname*{RI} \to \max \iff \operatorname*{ACPR} \to \min.
+            \end{equation*}
+        \end{definition}
+
+
+\section{Practical Problems and Backtesting}\label{section:Backtest}
+    \subsection{Data collection and features calculation}
+        We obtained the L3 market data for the four currency pairs (*\_TOM\footnote{TOD is a transaction in which currency conversion is performed on the day of the transaction.
+        TOM is a transaction in which the conversion is made the day after the conclusion of the transaction, while the conversion rate is fixed on the day of the transaction.
+        SPOT is similar to the TOM transaction, but the conversion is made on the third day after the transaction is concluded.} instrument) from the Moscow Exchange:
         \begin{enumerate}
             \item USD/RUB; 
             \item EUR/RUB; 
-            \item CHN/RUB;
+            \item USD/CNH;
             \item EUR/USD.
         \end{enumerate} 
-        The estimated size of the data is approximately 80 Gb. The data is stored in the JSON format and has the following fields:
-        \begin{itemize}
-            \item \mintinline{rust}|date| contains a string with an information about the tick itself.
-            \item \mintinline{rust}|instrument| contains a name of the currency pair.
-            \item \mintinline{rust}|r#type| contains a enum: either a \mintinline{rust}|SNAPSHOT| or an \mintinline{rust}|INCREMENT|.
-            \item \mintinline{rust}|side| contains a enum: either \mintinline{rust}|BID| or \mintinline{rust}|ASK|.
-            \item \mintinline{rust}|quotes|:
-                \begin{itemize}
-                    \item if \mintinline{rust}|type| is \mintinline{rust}|SNAPSHOT|, then this field contains an array of L3 quotes, i.e. status quo of the side of the book;
-                    \item if \mintinline{rust}|type| is \mintinline{rust}|INCREMENT|, then this field contains two arrays of L3 quotes and an array of \mintinline{rust}|int|s (\mintinline{rust}|added|, \mintinline{rust}|changed|, and \mintinline{rust}|deleted| correspodingly).
-                \end{itemize}
-        \end{itemize}
-        An example of a tick: \inputminted{json}{codeminted/l3quote.json}
-
-    \subsection{Order book implementation}
-        We implemented the order book in Rust using the B-tree as a base data structure (See \Cite{Cormen2022}). To our knowledge, 
-        the ring buffer is considered to be the best practice in the industrial tasks for the order book storing, but we used 
-        the B-tree due to the ease of the implementation.
-        In order to effectively search the order book, we implemented the hash map contating the IDs of the quotes and
-        the price levels at which the order is placed. The \mintinline{rust}|OrderBook| struct contains the following fields:
-        \begin{enumerate}
-            \item \mintinline{rust}|instrument|: a field containing the name of the asset;
-            \item \mintinline{rust}|bid| and \mintinline{rust}|ask|: sides of an order book. They are 
-                stored as a B-tree with price levels as keys and queues of L3 quotes as the items correspoding
-                to the price levels.
-            \item \mintinline{rust}|price_step| and \mintinline{rust}|price_step_inv| are needed to calculate the 
-                price level of the correspoding order. \mintinline{rust}|key = price*price_step_inv|.
-        \end{enumerate}
-        The data is read from the raw MOEX files using the \href{github.com/serde-rs/json}{\texttt{serde-rs/json}} library. Then, the obtained data is
-        converted into the \mintinline{rust}|OrderBook| structure tick-by-tick using the \mintinline{rust}|OrderBook::update| method.
-
-    \subsection{Features calculation}
+        Technical data description and order book implementation details could be found in the Appendix \ref{appendix:data}.
         To calibrate the trading algorithms, we calculated the following parameters from the LOB:
         \begin{itemize}
             \item price-by-volume $P(Q)$;
@@ -298,13 +322,62 @@
             \end{itemize}
         \end{itemize}
 
-    \subsection{Backtesting the algorithms}
-        \begin{figure}[htbp]
-            \includegraphics[width=\textwidth]{twap_acpr.pdf}
-            \caption{TWAP ACPR dynamics as a function of frequency of trading. $T = 200$.}
-        \end{figure}
+    \subsection{Backtesting the algorithms}\label{section:backtest}
+        Backtesting steps:
+        \begin{enumerate}
+            \item We chose some intraday data for all four instruments.
+            \item We chose every 100th tick of the book for the L3 intraday data (we did not assume the overnights or execution
+                  longer than the rest of the trading day) assuming that the liquidity comes back to its' historical level after 100 ticks.
+            \item We calculated the ACPR series in consecutive rounds for the obtained time series of functions.
+            \item We calculated the RI metrics and plotted the results.
+        \end{enumerate}
+        Note that the backtesting uses the morning data only due to the tendency to higher liquidity at this time of day. 
+        This is vital since the authors of the GLOBE algorithm emphasize that the size of the position to be liquidated should be quite small 
+        compared to the depth of the limit order book.
 
         \begin{figure}[htbp]
-            \includegraphics[width=\textwidth]{ac_acpr.pdf}
-            \caption{Almgren-Chriss ACPR dynamics as a function of frequency of trading. $T = 200$.}
+            \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-10-04 T = 50 W = 500.pdf}
+            \caption{ACPR and RI metrics for USD\_CNH\_T+1 on 2022-10-04 with $T = 50$ and $W = 500$}\label{fig:backtest1}
         \end{figure}
+
+        For now, we shall deeply analyze the USD/CNH\_TOM only (Figures \ref{fig:backtest1} -- \ref{fig:backtest4}). The complete backtest 
+        for the USD/RUB\_TOM (with the parameters below) could be found in Appendix \ref{appendix:backtest}.
+        We used the following parameters of the models:
+        \begin{minted}[gobble=8]{python3}
+            T = 50
+            W = np.ones(shape=10, dtype=int) * 500
+            W_max = 501
+
+            lamb = 2 * (0.01)
+            eta = 2 * (0.001)
+            init_sigma = 0.021713089727230926
+
+            start = 2
+            stop = T
+            num = 49
+
+            skip = 0
+            rounds_for_est = 15
+
+            K = 100000.0
+        \end{minted}
+        The parameters above were manually chosen such that the 2022-10-04 trading day (Figure \ref{fig:backtest1}) had the best performance 
+        for the GLOBE algorithms while selling the dollar/yuan currency pair.
+        
+        \begin{figure}[htbp]
+            \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-10-20 T = 50 W = 500.pdf}
+            \caption{ACPR and RI metrics for USD\_CNH\_T+1 on 2022-10-20 with $T = 50$ and $W = 500$}\label{fig:backtest2}
+        \end{figure}
+        
+        \begin{figure}[htbp]
+            \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-11-01 T = 50 W = 500.pdf}
+            \caption{ACPR and RI metrics for USD\_CNH\_T+1 on 2022-11-01 with $T = 50$ and $W = 500$}\label{fig:backtest3}
+        \end{figure}
+        
+        \begin{figure}[htbp]
+            \includegraphics[width=\textwidth]{USD_CNH_T+1 2022-11-15 T = 50 W = 500.pdf}
+            \caption{ACPR and RI metrics for USD\_CNH\_T+1 on 2022-11-15 with $T = 50$ and $W = 500$}\label{fig:backtest4}
+        \end{figure}
+
+        It is observable that for all chosen trading days GLOBE \& GLOBE+ tend to outperform the AC algorithm.
+        However, it is obvious that the performance of the three algorithms strongly depend on the chosen parameters.

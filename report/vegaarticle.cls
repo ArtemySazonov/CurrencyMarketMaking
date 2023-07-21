@@ -44,6 +44,7 @@
 
 \RequirePackage{authblk}
 \RequirePackage[symbol]{footmisc}
+\RequirePackage{csquotes}
 
 %\RequirePackage{abstract}
 

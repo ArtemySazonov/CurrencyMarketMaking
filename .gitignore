@@ -7,7 +7,7 @@ PDFs/
 report/document.pdf
 Conference 2023 Materials/poster/poster.pdf
 
-data_parsing/.idea/
+.idea
 data_parsing/target/
 
 data_parsing/data/USD_RUB_T+1__2022-11-10_PQ_ask.tsv
