@@ -122,8 +122,6 @@
 % Available: English, Russian
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\newcommand{\textLectureNotes}   {Lecture Slides}
-
 \newcommand{\textTableofcontents}{Outline}
 \newcommand{\textListoffigures}  {List of Figures}
 \newcommand{\textListoftables}   {List of Tables}
@@ -135,8 +133,7 @@
 
 \newcommand{\textProposition}    {Proposition}
 
-\ifx\ifbeamer@russian
-    \renewcommand{\textLectureNotes}   {Лекционные слайды}
+%\ifx\ifbeamer@russian
 
     \renewcommand{\textTableofcontents}{Содержание}
     \renewcommand{\textListoffigures}  {Список рисунков}
@@ -149,10 +146,10 @@
     \renewcommand{\textSupervisors}    {Руководители}
     \renewcommand{\textSupervisor}     {Руководитель}
 
-    \RequirePackage[english,russian]{babel}
+    \RequirePackage[russian]{babel}
     \renewcommand{\epsilon}{\varepsilon}
     \renewcommand{\phi}{\varphi}
-\fi
+%\fi
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
