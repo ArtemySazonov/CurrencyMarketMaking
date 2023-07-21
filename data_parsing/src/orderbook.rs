@@ -121,7 +121,7 @@ impl OrderBook
     {
         self.ask.retain(|_k,v| v.len() != 0);
         self.bid.retain(|_k,v| v.len() != 0);
-        self.check_bid_ask_overlap();                                                             //Commented out since not needed
+        self.check_bid_ask_overlap();
     }
 
     fn check_bid_ask_overlap(&self)

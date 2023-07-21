@@ -250,16 +250,17 @@
                 \begin{itemize}
                     \item The complexity of the algorithm does not include a dependency on $W_{\text{max}}$, but one should solve the Bellman equation for all $I\in \{0, \dots, W_{\text{max}}\}$.
                     \item They did not specify the correct behaviour of the policy $\pi_l(M_l, I_l, X)$ and the V-value of the policy $V^*_l(M', I - a, X)$ (expected cost) when $I-a < 0$. We assumed here $\max(I-a, 0)$ due to the fact that we simply cannot sell more than our current inventory contains.
-                    \item Moreover, we shall never enter the outer loop since the initialized value of $\rho$ is $1$, and the loop condition is $\rho > 1$. We changed this to $\rho < \operatorname{num\_of\_rounds} + \operatorname{rounds\_for\_est}$ (rounds for est correspond to the initial value of volatility)
+                    \item Moreover, we shall never enter the outer loop since the initialized value of $\rho$ is $1$, and the loop condition is $\rho > 1$. We changed this to $\rho < \operatorname{num\_of\_rounds}$ and we included extra $\operatorname{rounds\_for\_est}$ rounds to estimate the market state set and microstructural realized volatility. 
                 \end{itemize}
             \end{enumerate}
 
             \begin{algorithm}
                 \caption[Modified GLOBE Algorithm]{Modified Greedy exploitation in Limit Order Book Execution (M-GLOBE)}
                 \begin{algorithmic}
-                    \State Input: $L, \mathcal{M}$
+                    \State Input: $L, \operatorname{rounds\_for\_est}$
+                    \State Estimate $\mathcal{M}$ and $\operatorname{init\_sigma}$ using $\operatorname{rounds\_for\_est}$ rounds
                     \State Initialize: $\rho = 1, N(M)=0, N(M,M)=0, \forall M, M' \in \mathcal{M}$, $\sigma = \operatorname{init\_sigma}$
-                    \While {$\rho < \operatorname{num\_of\_rounds} + \operatorname{rounds\_for\_est}$}
+                    \While {$\rho < \operatorname{num\_of\_rounds}$}
                         \State $\hat P_\rho (M, M') := \frac{N(M, M') + \1(N(M) = 0)}{N(M) + |\mathcal M| \1 (N(M) = 0)}$
                         \State Update $\sigma_\rho$ in the AC model based on the past observations
                         \State Observe $X_\rho = (W_\rho, p_r(\rho), \sigma_\rho, B_1^\rho)$
