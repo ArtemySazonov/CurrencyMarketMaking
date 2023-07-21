@@ -4,5 +4,5 @@ find_package(Python COMPONENTS Interpreter REQUIRED)
 set(OPTIMAL_EXECUTION_DIR ${CMAKE_SOURCE_DIR}/optexec)
 
 add_test(NAME Execution
-    COMMAND ${Python_EXECUTABLE} ${OPTIMAL_EXECUTION_DIR}/__init__.py
+    COMMAND ${Python_EXECUTABLE} -m pytest -v optexec/*.py
 )
