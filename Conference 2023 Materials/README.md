@@ -1,10 +1,10 @@
 ## Online machine learning and reinforcement learning applied to the optimal trade execution
 
-The PDF of the poster could be found [here](https://github.com/ArtemySazonov/CurrencyMarketMaking/actions/workflows/poster.yml).
-
-The PDF of the slides could be found [here](https://github.com/ArtemySazonov/CurrencyMarketMaking/actions/workflows/presentation.yml).
+The PDF of the poster, presentation and report could be found [here](https://github.com/ArtemySazonov/CurrencyMarketMaking/actions/workflows/poster.yml).
 
 **Supervisors**: Anton Filatov, Vadim Meshcheryakov
+
+**Participants**: Artemy Sazonov, Danil Legenky
 
 **Objectives**:
 1. Implement the order book data structure in Rust;

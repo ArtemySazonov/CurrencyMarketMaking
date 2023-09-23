@@ -1,4 +1,4 @@
-name: Build LaTeX Conference Materials (2023)
+name: Build LaTeX Materials (July 2023)
 on:   
   pull_request:
     branches: [ "main" ]
@@ -32,3 +32,15 @@ jobs:
         with:
           name: Poster
           path: Conference 2023 Materials/poster/poster.pdf
+
+      - name: Compile report
+        uses: xu-cheng/latex-action@v2
+        with:
+          working_directory: Conference 2023 Materials/report/
+          root_file: document.tex
+
+      - name: Upload report
+        uses: actions/upload-artifact@v3
+        with:
+          name: Report
+          path: Conference 2023 Materials/report/document.pdf
