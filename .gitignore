@@ -7,20 +7,11 @@ build/
 md_vega_mm_2023_spring/
 PDFs/
 
-Conference 2023 Materials/report/document.pdf
-Conference 2023 Materials/poster/poster.pdf
-Conference 2023 Materials/presentation/presentation.pdf
-
-data/USD_RUB_T+1__2022-11-10_PQ_ask.tsv
-data/USD_RUB_T+1__2022-11-10
-data/USD_RUB_T+1__2022-11-10_PQ_bid.tsv
-data/USD_RUB_T+1__2022-11-10_QdP_ask.tsv
-data/USD_RUB_T+1__2022-11-10_QdP_bid.tsv
-
 data/
 
 __pycache__
-.pytest_cache
+.pytest_cache/
+venv
 
 *.aux
 *.bbl
@@ -43,3 +34,7 @@ __pycache__
 *.pygstyle
 
 _minted-*
+
+Conference 2023 Materials/report/document.pdf
+Conference 2023 Materials/poster/poster.pdf
+Conference 2023 Materials/presentation/presentation.pdf
